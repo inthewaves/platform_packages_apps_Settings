@@ -33,6 +33,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -45,6 +46,7 @@ import androidx.preference.Preference.OnPreferenceChangeListener;
 import androidx.preference.PreferenceGroup;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.PreferenceViewHolder;
+import androidx.preference.SwitchPreference;
 
 import com.android.settings.R;
 import com.android.settings.SettingsPreferenceFragment;
@@ -109,8 +111,10 @@ public class FingerprintSettings extends SubSettings {
         private static final String TAG = "FingerprintSettings";
         private static final String KEY_FINGERPRINT_ITEM_PREFIX = "key_fingerprint_item";
         private static final String KEY_FINGERPRINT_ADD = "key_fingerprint_add";
+        private static final String KEY_FINGERPRINT_SCREEN_LOCK_OPTIONS_CATEGORY =
+                "security_settings_fingerprint_unlock_category";
         private static final String KEY_FINGERPRINT_ENABLE_KEYGUARD_TOGGLE =
-                "fingerprint_enable_keyguard_toggle";
+                "security_settings_fingerprint_keyguard";
         private static final String KEY_LAUNCHED_CONFIRM = "launched_confirm";
 
         private static final int MSG_REFRESH_FINGERPRINT_TEMPLATES = 1000;
@@ -368,6 +372,24 @@ public class FingerprintSettings extends SubSettings {
             root = getPreferenceScreen();
             addFingerprintItemPreferences(root);
             setPreferenceScreen(root);
+
+            // Need to add back the keyguard preferences, since addFingerprintItemPreferences
+            // calls root.removeAll() again.
+            addPreferencesFromResource(R.xml.security_settings_fingerprint);
+
+            // Don't show keyguard preferences for work profile settings.
+            if (UserManager.get(getContext()).isManagedProfile(mUserId)) {
+                removePreference(KEY_FINGERPRINT_SCREEN_LOCK_OPTIONS_CATEGORY);
+            } else {
+                SwitchPreference lockScreenFingerprintPreference =
+                        (SwitchPreference) findPreference(KEY_FINGERPRINT_ENABLE_KEYGUARD_TOGGLE);
+
+                lockScreenFingerprintPreference.setChecked(Settings.Secure.getInt(
+                        getContext().getContentResolver(),
+                        Settings.Secure.FINGERPRINT_UNLOCK_KEYGUARD_ENABLED, 1) == 1);
+                lockScreenFingerprintPreference.setOnPreferenceChangeListener(this);
+            }
+
             return root;
         }
 
@@ -382,6 +404,7 @@ public class FingerprintSettings extends SubSettings {
                 pref.setKey(genKey(item.getBiometricId()));
                 pref.setTitle(item.getName());
                 pref.setFingerprint(item);
+                pref.setOrder(1);
                 pref.setPersistent(false);
                 pref.setIcon(R.drawable.ic_fingerprint_24dp);
                 if (mRemovalSidecar.isRemovingFingerprint(item.getBiometricId())) {
@@ -397,6 +420,7 @@ public class FingerprintSettings extends SubSettings {
             addPreference.setKey(KEY_FINGERPRINT_ADD);
             addPreference.setTitle(R.string.fingerprint_add_title);
             addPreference.setIcon(R.drawable.ic_add_24dp);
+            addPreference.setOrder(2);
             root.addPreference(addPreference);
             addPreference.setOnPreferenceChangeListener(this);
             updateAddPreference();
@@ -526,7 +550,10 @@ public class FingerprintSettings extends SubSettings {
             boolean result = true;
             final String key = preference.getKey();
             if (KEY_FINGERPRINT_ENABLE_KEYGUARD_TOGGLE.equals(key)) {
-                // TODO
+                boolean enableFingerprintUnlock = (Boolean) value;
+                Settings.Secure.putInt(getContext().getContentResolver(),
+                        Settings.Secure.FINGERPRINT_UNLOCK_KEYGUARD_ENABLED,
+                        (enableFingerprintUnlock) ? 1 : 0);
             } else {
                 Log.v(TAG, "Unknown key:" + key);
             }
