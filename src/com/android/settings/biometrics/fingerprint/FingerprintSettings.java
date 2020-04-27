@@ -33,6 +33,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.UserHandle;
 import android.os.UserManager;
+import android.provider.SearchIndexableResource;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
@@ -56,8 +57,10 @@ import com.android.settings.biometrics.BiometricEnrollBase;
 import com.android.settings.core.instrumentation.InstrumentedDialogFragment;
 import com.android.settings.password.ChooseLockGeneric;
 import com.android.settings.password.ChooseLockSettingsHelper;
+import com.android.settings.search.BaseSearchIndexProvider;
 import com.android.settings.utils.AnnotationSpan;
 import com.android.settings.widget.ImeAwareEditText;
+import com.android.settingslib.core.AbstractPreferenceController;
 import com.android.settingslib.HelpUtils;
 import com.android.settingslib.RestrictedLockUtils;
 import com.android.settingslib.RestrictedLockUtils.EnforcedAdmin;
@@ -65,6 +68,8 @@ import com.android.settingslib.RestrictedLockUtilsInternal;
 import com.android.settingslib.TwoTargetPreference;
 import com.android.settingslib.widget.FooterPreference;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -271,6 +276,11 @@ public class FingerprintSettings extends SubSettings {
         @Override
         public int getMetricsCategory() {
             return SettingsEnums.FINGERPRINT;
+        }
+        
+        public static boolean isAvailable(Context context) {
+            FingerprintManager manager = Utils.getFingerprintManagerOrNull(context);
+            return manager != null && manager.isHardwareDetected();
         }
 
         @Override
@@ -682,6 +692,35 @@ public class FingerprintSettings extends SubSettings {
                 retryFingerprint();
             }
         };
+        
+        public static final SearchIndexProvider SEARCH_INDEX_DATA_PROVIDER =
+            new BaseSearchIndexProvider() {
+                @Override
+                public List<SearchIndexableResource> getXmlResourcesToIndex(
+                        Context context, boolean enabled) {
+                    final SearchIndexableResource sir = new SearchIndexableResource(context);
+                    sir.xmlResId = R.xml.security_settings_fingerprint;
+                    return Arrays.asList(sir);
+                }
+
+                @Override
+                public List<AbstractPreferenceController> createPreferenceControllers(
+                        Context context) {
+                    /*
+                    if (isAvailable(context)) {
+                        return buildPreferenceControllers(context, null);
+                    } else {
+                        return null;
+                    }
+                    */
+                    return null;
+                }
+
+                @Override
+                protected boolean isPageSearchEnabled(Context context) {
+                    return isAvailable(context);
+                }
+            };
 
         public static class DeleteFingerprintDialog extends InstrumentedDialogFragment
                 implements DialogInterface.OnClickListener {
