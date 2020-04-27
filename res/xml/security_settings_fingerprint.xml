@@ -16,5 +16,19 @@
 
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:title="@string/security_settings_fingerprint_preference_title"/>
+    android:title="@string/security_settings_fingerprint_preference_title">
+
+    <!-- placeholder -->
+    <PreferenceCategory
+        android:title="@string/fingerprint_screen_lock_settings_title"
+        android:order="10"
+        android:key="fingerprint_screen_lock_options_category">
+
+        <SwitchPreference
+            android:key="fingerprint_enable_keyguard_toggle"
+            android:title="@string/fingerprint_allow_unlock_title"
+            android:summary="@string/fingerprint_allow_unlock_summary" />
+    </PreferenceCategory>
+
+</PreferenceScreen>
 
