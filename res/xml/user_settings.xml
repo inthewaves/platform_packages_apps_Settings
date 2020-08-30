@@ -40,4 +40,11 @@
         android:order="105"
         settings:allowDividerAbove="true"/>
 
+    <SwitchPreference
+        android:key="user_settings_limit_number_background_users"
+        android:title="@string/user_settings_limit_number_background_users"
+        android:summary="@string/user_settings_limit_number_background_users_summary_on"
+        android:order="106"
+        settings:allowDividerAbove="true"/>
+
 </PreferenceScreen>
