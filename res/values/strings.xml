@@ -6843,6 +6843,12 @@
     <string name="user_lockscreen_settings">Lock screen settings</string>
     <!-- User settings item to allow creating new users from locks screen [CHAR LIMIT=50] -->
     <string name="user_add_on_lockscreen_menu">Add users from lock screen</string>
+    <!-- User settings item to enable a limit on background users [CHAR LIMIT=50] -->
+    <string name="user_settings_limit_number_background_users">Limit number of background users</string>
+    <!-- User settings item to enable a limit on background users summary for setting off  -->
+    <string name="user_settings_limit_number_background_users_summary_off">Limits the number of non-admin users that can run in the background. If the limit is exceeded, the least recently used users will be killed first.</string>
+    <!-- User settings item to enable a limit on background users summary for setting on  -->
+    <string name="user_settings_limit_number_background_users_summary_on">Limits the number of non-admin users that can run in the background. If the limit is exceeded, the least recently used users will be killed first. Current limit is <xliff:g id="count">%1$d</xliff:g></string>
     <!-- User details new user name [CHAR LIMIT=30] -->
     <string name="user_new_user_name">New user</string>
     <!-- User details new restricted profile name [CHAR LIMIT=30] -->
