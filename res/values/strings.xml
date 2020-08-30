@@ -11448,7 +11448,7 @@
     <!-- User settings item to enable a limit on active users [CHAR LIMIT=50] -->
     <string name="user_settings_limit_number_active_users">Limit active users</string>
     <!-- User settings item to enable a limit on active users summary for setting on  -->
-    <string name="user_settings_limit_number_active_users_summary">Keeps the active users count at <xliff:g id="count">%1$d</xliff:g> or less by stopping the least recently switched-to users when over the limit. The admin user is never stopped.</string>
+    <string name="user_settings_limit_number_active_users_summary">Limits the number of active users to <xliff:g id="count">%1$d</xliff:g> by stopping the least recently switched-to users when over the limit. The admin user is never stopped.</string>
     <!-- User settings toast that appears when enabling the setting [CHAR LIMIT=50] -->
     <string name="user_settings_limit_number_active_users_toast">The limit will be enforced when switching users.</string>
 </resources>
