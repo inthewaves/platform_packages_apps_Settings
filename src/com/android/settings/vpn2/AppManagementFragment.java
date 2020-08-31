@@ -234,6 +234,11 @@ public class AppManagementFragment extends SettingsPreferenceFragment
             final boolean lockdown = alwaysOn
                     && VpnUtils.isAnyLockdownActive(getActivity());
 
+            Log.d(TAG, "updateUI: alwaysOn? " + alwaysOn);
+            Log.d(TAG, "updateUI: VpnUtils.isAnyLockdownActive(getActivity())? " + VpnUtils.isAnyLockdownActive(getActivity()));
+
+
+
             mPreferenceAlwaysOn.setChecked(alwaysOn);
             mPreferenceLockdown.setChecked(lockdown);
             updateRestrictedViews();

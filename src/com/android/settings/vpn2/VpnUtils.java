@@ -63,8 +63,16 @@ public class VpnUtils {
     public static boolean isAnyLockdownActive(Context context) {
         final int userId = context.getUserId();
         if (getLockdownVpn() != null) {
+            Log.d(TAG, "isAnyLockdownActive: for userId " + userId + ", getLockdownVpn() is not null");
             return true;
         }
+        Log.d(TAG, "isAnyLockdownActive: for userId " + userId + ", getLockdownVpn() is null");
+
+        Log.d(TAG, "isAnyLockdownActive: for userId " + userId + ", getConnectivityManager(context).getAlwaysOnVpnPackageForUser(userId) != null? " + (getConnectivityManager(context).getAlwaysOnVpnPackageForUser(userId) != null));
+
+        Log.d(TAG, "Settings.Secure.getIntForUser(...): " + (Settings.Secure.getIntForUser(context.getContentResolver(),
+                Settings.Secure.ALWAYS_ON_VPN_LOCKDOWN, /* default */ 0, userId) != 0) );
+
         return getConnectivityManager(context).getAlwaysOnVpnPackageForUser(userId) != null
                 && Settings.Secure.getIntForUser(context.getContentResolver(),
                         Settings.Secure.ALWAYS_ON_VPN_LOCKDOWN, /* default */ 0, userId) != 0;
