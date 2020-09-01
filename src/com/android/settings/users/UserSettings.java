@@ -939,8 +939,16 @@ public class UserSettings extends SettingsPreferenceFragment
                 pref.setIcon(getEncircledDefaultIcon());
             }
 
-            // Show active status
-            if (mUserCaps.mIsAdmin && mUserManager.isUserRunning(user.id)) {
+            boolean isUserRunning;
+            try {
+                isUserRunning = ActivityManager.getService().isUserRunning(user.id, 0);
+            } catch (RemoteException re) {
+                // Assume not running
+                isUserRunning = false;
+            }
+
+            if (mUserCaps.mIsAdmin && isUserRunning) {
+                // Show the Active status
                 final CharSequence originalSummary = pref.getSummary();
                 final String active = getString(R.string.user_summary_active);
                 final boolean alreadyAdded = originalSummary != null
