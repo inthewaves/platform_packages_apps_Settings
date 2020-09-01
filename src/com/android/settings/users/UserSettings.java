@@ -146,7 +146,14 @@ public class UserSettings extends SettingsPreferenceFragment
     static {
         USER_REMOVED_INTENT_FILTER = new IntentFilter(Intent.ACTION_USER_REMOVED);
         USER_REMOVED_INTENT_FILTER.addAction(Intent.ACTION_USER_INFO_CHANGED);
+        USER_REMOVED_INTENT_FILTER.addAction(Intent.ACTION_SHUTDOWN);
     }
+
+    private static final IntentFilter USER_STOPPED_INTENT_FILTER =
+            new IntentFilter(Intent.ACTION_SHUTDOWN);
+
+    private static final IntentFilter USER_STOPPED_INTENT_FILTER2 =
+            new IntentFilter(Intent.ACTION_SHUTDOWN);
 
     @VisibleForTesting
     PreferenceGroup mUserListCategory;
@@ -191,16 +198,43 @@ public class UserSettings extends SettingsPreferenceFragment
         }
     };
 
+    private final BroadcastReceiver mUserStoppedReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "DEBUG: mUserStoppedReceiver has received!");
+            final String action = intent.getAction();
+            if (action.equals(Intent.ACTION_SHUTDOWN)) {
+                updateUI();
+            }
+        }
+    };
+
+    private final BroadcastReceiver mUserStoppedReceiverTest = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "DEBUG: mUserStoppedReceiverTest has received!");
+            final String action = intent.getAction();
+            if (action.equals(Intent.ACTION_SHUTDOWN)) {
+                updateUI();
+            }
+        }
+    };
+
     private BroadcastReceiver mUserChangeReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "DEBUG: mUserChangeReceiver received!");
             if (intent.getAction().equals(Intent.ACTION_USER_REMOVED)) {
                 mRemovingUserId = -1;
+                Log.d(TAG, "DEBUG: mUserChangeReceiver ACTION_USER_REMOVED!");
             } else if (intent.getAction().equals(Intent.ACTION_USER_INFO_CHANGED)) {
                 int userHandle = intent.getIntExtra(Intent.EXTRA_USER_HANDLE, -1);
                 if (userHandle != -1) {
                     mUserIcons.remove(userHandle);
                 }
+                Log.d(TAG, "DEBUG: mUserChangeReceiver ACTION_USER_INFO_CHANGED!");
+            } else {
+                Log.d(TAG, "DEBUG: mUserChangeReceiver ACTION_USER_SHUTDOWN!");
             }
             mHandler.sendEmptyMessage(MESSAGE_UPDATE_LIST);
         }
@@ -291,6 +325,13 @@ public class UserSettings extends SettingsPreferenceFragment
 
         updateUI();
         mShouldUpdateUserList = false;
+
+        if (mUserCaps.isAdmin()) {
+            //Log.d(TAG, "DEBUG: registering user stopped intent filters");
+            //activity.registerReceiverAsUser(
+            //        mUserStoppedReceiver, UserHandle.ALL, USER_STOPPED_INTENT_FILTER, null, mHandler);
+            //activity.registerReceiver(mUserStoppedReceiverTest, USER_STOPPED_INTENT_FILTER2);
+        }
     }
 
     @Override
@@ -327,6 +368,11 @@ public class UserSettings extends SettingsPreferenceFragment
         }
 
         getActivity().unregisterReceiver(mUserChangeReceiver);
+        if (mUserCaps.isAdmin()) {
+            //Log.d(TAG, "DEBUG: unregistering receiver");
+            //getActivity().unregisterReceiver(mUserStoppedReceiver);
+            //getActivity().unregisterReceiver(mUserStoppedReceiverTest);
+        }
     }
 
     @Override
@@ -891,6 +937,21 @@ public class UserSettings extends SettingsPreferenceFragment
             } else {
                 // Icon not available yet, print a placeholder
                 pref.setIcon(getEncircledDefaultIcon());
+            }
+
+            // Show active status
+            if (mUserCaps.mIsAdmin && mUserManager.isUserRunning(user.id)) {
+                final CharSequence originalSummary = pref.getSummary();
+                final String active = getString(R.string.user_summary_active);
+                final boolean alreadyAdded = originalSummary != null
+                        && (originalSummary.toString().endsWith(" - " + active)
+                            || originalSummary.toString().equals(active));
+
+                if (originalSummary == null || originalSummary.length() == 0) {
+                    pref.setSummary(active);
+                } else if (!alreadyAdded) {
+                    pref.setSummary(originalSummary.toString() + " - " + active);
+                }
             }
         }
 
