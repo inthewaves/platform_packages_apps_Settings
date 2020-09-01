@@ -50,7 +50,7 @@ public class LimitNumberOfRunningUsersPreferenceController extends TogglePrefere
         if (isChecked) {
             // Tell the user that enabling the setting won't enforce the limit right away.
             Toast.makeText(mContext, R.string.user_settings_limit_number_active_users_toast,
-                    Toast.LENGTH_SHORT);
+                    Toast.LENGTH_SHORT).show();
         }
 
         return Settings.Global.putInt(mContext.getContentResolver(),
