@@ -1,7 +1,6 @@
 package com.android.settings.users;
 
 import android.content.Context;
-import android.os.UserManager;
 import android.provider.Settings;
 
 import androidx.preference.Preference;
@@ -9,11 +8,11 @@ import androidx.preference.Preference;
 import com.android.settings.R;
 import com.android.settings.core.TogglePreferenceController;
 
-public class LimitNumberOfBackgroundUsersPreferenceController extends TogglePreferenceController {
+public class LimitNumberOfRunningUsersPreferenceController extends TogglePreferenceController {
 
     private final UserCapabilities mUserCaps;
 
-    public LimitNumberOfBackgroundUsersPreferenceController(Context context, String key) {
+    public LimitNumberOfRunningUsersPreferenceController(Context context, String key) {
         super(context, key);
         mUserCaps = UserCapabilities.create(context);
     }
