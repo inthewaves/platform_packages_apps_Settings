@@ -112,7 +112,7 @@ public class UserSettings extends SettingsPreferenceFragment
     private static final String KEY_ADD_USER = "user_add";
     private static final String KEY_ADD_USER_WHEN_LOCKED = "user_settings_add_users_when_locked";
     private static final String KEY_LIMIT_NUMBER_RUNNING_USERS =
-            "user_settings_limit_number_background_users";
+            "user_settings_limit_number_active_users";
 
     private static final int MENU_REMOVE_USER = Menu.FIRST;
 

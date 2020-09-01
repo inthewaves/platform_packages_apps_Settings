@@ -45,9 +45,9 @@
             android:order="105"/>
 
         <SwitchPreference
-            android:key="user_settings_limit_number_background_users"
-            android:title="@string/user_settings_limit_number_background_users"
-            android:summary="@string/user_settings_limit_number_background_users_summary"
+            android:key="user_settings_limit_number_active_users"
+            android:title="@string/user_settings_limit_number_active_users"
+            android:summary="@string/user_settings_limit_number_active_users_summary"
             android:order="106"/>
 
     </PreferenceCategory>
