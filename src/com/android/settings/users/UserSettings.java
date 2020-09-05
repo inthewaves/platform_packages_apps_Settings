@@ -110,6 +110,8 @@ public class UserSettings extends SettingsPreferenceFragment
     private static final String KEY_ADD_USER = "user_add";
     private static final String KEY_ADD_USER_WHEN_LOCKED = "user_settings_add_users_when_locked";
     private static final String KEY_MULTIUSER_FOOTER = "multiuser_footer";
+    private static final String KEY_SEND_CENSORED_NOTIFICATIONS =
+            "user_settings_send_censored_notifications_to_current";
 
     private static final int MENU_REMOVE_USER = Menu.FIRST;
 
@@ -167,6 +169,7 @@ public class UserSettings extends SettingsPreferenceFragment
     private MultiUserSwitchBarController mSwitchBarController;
     private EditUserInfoController mEditUserInfoController = new EditUserInfoController();
     private AddUserWhenLockedPreferenceController mAddUserWhenLockedPreferenceController;
+    private SendCensoredNotificationsToCurrentUserPreferenceController mSendCensoredNotificationsToCurrentUserPreferenceController;
     private MultiUserFooterPreferenceController mMultiUserFooterPreferenceController;
 
     private CharSequence mPendingUserName;
@@ -234,16 +237,21 @@ public class UserSettings extends SettingsPreferenceFragment
 
         mAddUserWhenLockedPreferenceController = new AddUserWhenLockedPreferenceController(
                 activity, KEY_ADD_USER_WHEN_LOCKED);
-
+        mSendCensoredNotificationsToCurrentUserPreferenceController =
+                new SendCensoredNotificationsToCurrentUserPreferenceController(activity,
+                        KEY_SEND_CENSORED_NOTIFICATIONS);
         mMultiUserFooterPreferenceController = new MultiUserFooterPreferenceController(activity,
                 KEY_MULTIUSER_FOOTER);
 
         final PreferenceScreen screen = getPreferenceScreen();
         mAddUserWhenLockedPreferenceController.displayPreference(screen);
+        mSendCensoredNotificationsToCurrentUserPreferenceController.displayPreference(screen);
         mMultiUserFooterPreferenceController.displayPreference(screen);
 
         screen.findPreference(mAddUserWhenLockedPreferenceController.getPreferenceKey())
                 .setOnPreferenceChangeListener(mAddUserWhenLockedPreferenceController);
+        screen.findPreference(mSendCensoredNotificationsToCurrentUserPreferenceController
+                .getPreferenceKey()).setOnPreferenceChangeListener(mSendCensoredNotificationsToCurrentUserPreferenceController);
 
         if (icicle != null) {
             if (icicle.containsKey(SAVE_REMOVING_USER)) {
@@ -296,6 +304,9 @@ public class UserSettings extends SettingsPreferenceFragment
 
         mAddUserWhenLockedPreferenceController.updateState(screen.findPreference(
                 mAddUserWhenLockedPreferenceController.getPreferenceKey()));
+        mSendCensoredNotificationsToCurrentUserPreferenceController
+                .updateState(screen.findPreference(
+                        mSendCensoredNotificationsToCurrentUserPreferenceController.getPreferenceKey()));
 
         if (mShouldUpdateUserList) {
             updateUI();
@@ -930,9 +941,11 @@ public class UserSettings extends SettingsPreferenceFragment
         final Preference addUserOnLockScreen = getPreferenceScreen().findPreference(
                 mAddUserWhenLockedPreferenceController.getPreferenceKey());
         mAddUserWhenLockedPreferenceController.updateState(addUserOnLockScreen);
-
+        final Preference sendCensoredNotifs = getPreferenceScreen().findPreference(
+                mSendCensoredNotificationsToCurrentUserPreferenceController.getPreferenceKey());
         final Preference multiUserFooterPrefence = getPreferenceScreen().findPreference(
                 mMultiUserFooterPreferenceController.getPreferenceKey());
+        mSendCensoredNotificationsToCurrentUserPreferenceController.updateState(sendCensoredNotifs);
         mMultiUserFooterPreferenceController.updateState(multiUserFooterPrefence);
         mUserListCategory.setVisible(mUserCaps.mUserSwitcherEnabled);
 
@@ -1173,6 +1186,8 @@ public class UserSettings extends SettingsPreferenceFragment
                             new AddUserWhenLockedPreferenceController(
                                     context, KEY_ADD_USER_WHEN_LOCKED);
                     controller.updateNonIndexableKeys(niks);
+                    new SendCensoredNotificationsToCurrentUserPreferenceController(context,
+                            KEY_SEND_CENSORED_NOTIFICATIONS).updateNonIndexableKeys(niks);
                     new AutoSyncDataPreferenceController(context, null /* parent */)
                             .updateNonIndexableKeys(niks);
                     new AutoSyncPersonalDataPreferenceController(context, null /* parent */)

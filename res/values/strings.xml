@@ -12195,4 +12195,6 @@
     <string name="deny_new_usb_summary">Control support for USB peripherals such as input (mice, keyboards, joysticks) and storage devices.</string>
     <string name="keyguard_camera_title">Screen lock camera access</string>
     <string name="keyguard_camera_summary">Allow camera access when the device is locked</string>
+    <string name="user_settings_send_censored_notifications_to_current">Send notifications to current user</string>
+    <string name="user_settings_send_censored_notifications_to_current_summary">Forwards lock screen notifications to the current user when you are active in the background. Only your name and the app\'s name will be shown.</string>
 </resources>
