@@ -110,6 +110,8 @@ public class UserSettings extends SettingsPreferenceFragment
     private static final String KEY_ADD_USER = "user_add";
     private static final String KEY_ADD_USER_WHEN_LOCKED = "user_settings_add_users_when_locked";
     private static final String KEY_MULTIUSER_FOOTER = "multiuser_footer";
+    private static final String KEY_SEND_CENSORED_NOTIFICATIONS =
+            "user_settings_send_censored_notifications_to_current";
     private static final String KEY_LIMIT_NUMBER_RUNNING_USERS =
             "user_settings_limit_number_active_users";
 
@@ -170,6 +172,7 @@ public class UserSettings extends SettingsPreferenceFragment
     private MultiUserSwitchBarController mSwitchBarController;
     private EditUserInfoController mEditUserInfoController = new EditUserInfoController();
     private AddUserWhenLockedPreferenceController mAddUserWhenLockedPreferenceController;
+    private SendCensoredNotificationsToCurrentUserPreferenceController mSendCensoredNotificationsToCurrentUserPreferenceController;
     private LimitNumberOfRunningUsersPreferenceController mLimitNumberOfRunningUsersPreferenceController;
     private MultiUserFooterPreferenceController mMultiUserFooterPreferenceController;
 
@@ -240,6 +243,9 @@ public class UserSettings extends SettingsPreferenceFragment
 
         mAddUserWhenLockedPreferenceController = new AddUserWhenLockedPreferenceController(
                 activity, KEY_ADD_USER_WHEN_LOCKED);
+        mSendCensoredNotificationsToCurrentUserPreferenceController =
+                new SendCensoredNotificationsToCurrentUserPreferenceController(activity,
+                        KEY_SEND_CENSORED_NOTIFICATIONS);
         mLimitNumberOfRunningUsersPreferenceController =
                 new LimitNumberOfRunningUsersPreferenceController(
                         activity, KEY_LIMIT_NUMBER_RUNNING_USERS);
@@ -248,11 +254,14 @@ public class UserSettings extends SettingsPreferenceFragment
 
         final PreferenceScreen screen = getPreferenceScreen();
         mAddUserWhenLockedPreferenceController.displayPreference(screen);
+        mSendCensoredNotificationsToCurrentUserPreferenceController.displayPreference(screen);
         mLimitNumberOfRunningUsersPreferenceController.displayPreference(screen);
         mMultiUserFooterPreferenceController.displayPreference(screen);
 
         screen.findPreference(mAddUserWhenLockedPreferenceController.getPreferenceKey())
                 .setOnPreferenceChangeListener(mAddUserWhenLockedPreferenceController);
+        screen.findPreference(mSendCensoredNotificationsToCurrentUserPreferenceController
+                .getPreferenceKey()).setOnPreferenceChangeListener(mSendCensoredNotificationsToCurrentUserPreferenceController);
         screen.findPreference(mLimitNumberOfRunningUsersPreferenceController.getPreferenceKey())
                 .setOnPreferenceChangeListener(mLimitNumberOfRunningUsersPreferenceController);
 
@@ -307,6 +316,9 @@ public class UserSettings extends SettingsPreferenceFragment
 
         mAddUserWhenLockedPreferenceController.updateState(screen.findPreference(
                 mAddUserWhenLockedPreferenceController.getPreferenceKey()));
+        mSendCensoredNotificationsToCurrentUserPreferenceController
+                .updateState(screen.findPreference(
+                        mSendCensoredNotificationsToCurrentUserPreferenceController.getPreferenceKey()));
         mLimitNumberOfRunningUsersPreferenceController.updateState(screen.findPreference(
                 mLimitNumberOfRunningUsersPreferenceController.getPreferenceKey()));
 
@@ -970,10 +982,13 @@ public class UserSettings extends SettingsPreferenceFragment
         final Preference addUserOnLockScreen = getPreferenceScreen().findPreference(
                 mAddUserWhenLockedPreferenceController.getPreferenceKey());
         mAddUserWhenLockedPreferenceController.updateState(addUserOnLockScreen);
+        final Preference sendCensoredNotifs = getPreferenceScreen().findPreference(
+                mSendCensoredNotificationsToCurrentUserPreferenceController.getPreferenceKey());
         final Preference limitBackgroundUsers = getPreferenceScreen().findPreference(
                 mLimitNumberOfRunningUsersPreferenceController.getPreferenceKey());
         final Preference multiUserFooterPrefence = getPreferenceScreen().findPreference(
                 mMultiUserFooterPreferenceController.getPreferenceKey());
+        mSendCensoredNotificationsToCurrentUserPreferenceController.updateState(sendCensoredNotifs);
         mLimitNumberOfRunningUsersPreferenceController.updateState(limitBackgroundUsers);
         mMultiUserFooterPreferenceController.updateState(multiUserFooterPrefence);
         mUserListCategory.setVisible(mUserCaps.mUserSwitcherEnabled);
@@ -1215,6 +1230,8 @@ public class UserSettings extends SettingsPreferenceFragment
                             new AddUserWhenLockedPreferenceController(
                                     context, KEY_ADD_USER_WHEN_LOCKED);
                     controller.updateNonIndexableKeys(niks);
+                    new SendCensoredNotificationsToCurrentUserPreferenceController(context,
+                            KEY_SEND_CENSORED_NOTIFICATIONS).updateNonIndexableKeys(niks);
                     new LimitNumberOfRunningUsersPreferenceController(context,
                             KEY_LIMIT_NUMBER_RUNNING_USERS).updateNonIndexableKeys(niks);
                     new AutoSyncDataPreferenceController(context, null /* parent */)

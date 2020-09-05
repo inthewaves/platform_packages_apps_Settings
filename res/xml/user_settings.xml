@@ -50,10 +50,16 @@
             android:order="105"/>
 
         <SwitchPreference
+            android:key="user_settings_send_censored_notifications_to_current"
+            android:title="@string/user_settings_send_censored_notifications_to_current"
+            android:summary="@string/user_settings_send_censored_notifications_to_current_summary"
+            android:order="106"/>
+
+        <SwitchPreference
             android:key="user_settings_limit_number_active_users"
             android:title="@string/user_settings_limit_number_active_users"
             android:summary="@string/user_settings_limit_number_active_users_summary"
-            android:order="106"/>
+            android:order="107"/>
     </PreferenceCategory>
 
     <com.android.settingslib.widget.FooterPreference
