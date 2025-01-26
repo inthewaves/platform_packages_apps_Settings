@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:settings="http://schemas.android.com/apk/res-auto"
+    android:key="screen_lock_generation_choice_screen"
+    android:persistent="false">
+
+    <PreferenceCategory
+        android:key="recommended_category"
+        android:persistent="false"
+        android:title="@string/lock_screen_choice_generate_pref_recommended_category_title">
+
+        <Preference
+            android:key="use_generated_credential"
+            android:persistent="false"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="other_category"
+        android:persistent="false"
+        android:title="@string/lock_screen_choice_generate_pref_other_category_title">
+
+        <Preference
+            android:key="use_own_credential"
+            android:persistent="false"/>
+
+    </PreferenceCategory>
+
+    <com.android.settingslib.widget.FooterPreference
+        android:key="footer_screen_lock_creation_choice"
+        android:persistent="false"
+        android:selectable="false" />
+
+</PreferenceScreen>

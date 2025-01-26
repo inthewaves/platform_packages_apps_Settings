@@ -2977,6 +2977,13 @@
             android:enableOnBackInvokedCallback="false"
             android:exported="false" />
 
+        <activity android:name=".password.generate.GenerateLockPasswordActivity"
+            android:label="Generate"
+            android:excludeFromRecents="true"
+            android:theme="@style/GlifTheme.Light"
+            android:windowSoftInputMode="stateVisible|adjustResize"
+            android:exported="false" />
+
         <activity android:name=".password.SetNewPasswordActivity"
             android:theme="@android:style/Theme.NoDisplay"
             android:exported="true"

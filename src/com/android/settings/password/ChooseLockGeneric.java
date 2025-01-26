@@ -87,6 +87,7 @@ import com.android.settings.biometrics.BiometricUtils;
 import com.android.settings.biometrics.IdentityCheckBiometricErrorDialog;
 import com.android.settings.core.SubSettingLauncher;
 import com.android.settings.core.instrumentation.InstrumentedDialogFragment;
+import com.android.settings.password.generate.GenerateLockPasswordActivity;
 import com.android.settings.safetycenter.LockScreenSafetySource;
 import com.android.settings.search.SearchFeatureProvider;
 import com.android.settingslib.RestrictedPreference;
@@ -908,6 +909,14 @@ public class ChooseLockGeneric extends SettingsActivity {
                 intent = getLockManagedPasswordIntent(mUserPassword);
             } else if (quality >= DevicePolicyManager.PASSWORD_QUALITY_NUMERIC) {
                 intent = getLockPasswordIntent(quality);
+                // Take the extras meant for the original ChooseLockPassword activity
+                // and forward it. Will be used to detect if it's for password or PIN, and will also
+                // be forwarded to original lock password activity if user wants to use their own
+                // password.
+                final Intent generateLockPassIntent =
+                        new Intent(getContext(), GenerateLockPasswordActivity.class);
+                generateLockPassIntent.putExtras(intent);
+                intent = generateLockPassIntent;
             } else if (quality == DevicePolicyManager.PASSWORD_QUALITY_SOMETHING) {
                 intent = getLockPatternIntent();
             }

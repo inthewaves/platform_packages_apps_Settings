@@ -110,8 +110,8 @@ import java.util.Map;
 public class ChooseLockPassword extends SettingsActivity {
     private static final String TAG = "ChooseLockPassword";
 
-    static final String EXTRA_KEY_MIN_METRICS = "min_metrics";
-    static final String EXTRA_KEY_MIN_COMPLEXITY = "min_complexity";
+    public static final String EXTRA_KEY_MIN_METRICS = "min_metrics";
+    public static final String EXTRA_KEY_MIN_COMPLEXITY = "min_complexity";
 
     @Override
     public Intent getIntent() {
@@ -277,11 +277,11 @@ public class ChooseLockPassword extends SettingsActivity {
         private TextChangedHandler mTextChangedHandler;
 
         private static final int CONFIRM_EXISTING_REQUEST = 58;
-        static final int RESULT_FINISHED = RESULT_FIRST_USER;
+        public static final int RESULT_FINISHED = RESULT_FIRST_USER;
         private boolean mIsErrorTooShort = true;
 
         /** Used to store the profile type for which pin/password is being set */
-        protected enum ProfileType {
+        public enum ProfileType {
             None,
             Managed,
             Private,
@@ -292,7 +292,7 @@ public class ChooseLockPassword extends SettingsActivity {
         /**
          * Keep track internally of where the user is in choosing a pattern.
          */
-        protected enum Stage {
+        public enum Stage {
 
             Introduction(
                     R.string.lockpassword_choose_your_password_header, // password
@@ -491,7 +491,7 @@ public class ChooseLockPassword extends SettingsActivity {
             }
             // Only take this argument into account if it belongs to the current profile.
             mUserId = Utils.getUserIdFromBundle(getActivity(), intent.getExtras());
-            mProfileType = getProfileType();
+            mProfileType = getProfileType(getContext(), mUserId);
             mForFingerprint = intent.getBooleanExtra(
                     ChooseLockSettingsHelper.EXTRA_KEY_FOR_FINGERPRINT, false);
             mForFace = intent.getBooleanExtra(ChooseLockSettingsHelper.EXTRA_KEY_FOR_FACE, false);
@@ -1060,7 +1060,7 @@ public class ChooseLockPassword extends SettingsActivity {
             }
         }
 
-        private boolean isAutoPinConfirmPossible(int currentPinLength) {
+        public static boolean isAutoPinConfirmPossible(int currentPinLength) {
             return currentPinLength >= MIN_AUTO_PIN_REQUIREMENT_LENGTH;
         }
 
@@ -1192,8 +1192,8 @@ public class ChooseLockPassword extends SettingsActivity {
             }
         }
 
-        private ProfileType getProfileType() {
-            UserManager userManager = getContext().createContextAsUser(UserHandle.of(mUserId),
+        public static ProfileType getProfileType(Context context, int userId) {
+            UserManager userManager = context.createContextAsUser(UserHandle.of(userId),
                     /*flags=*/0).getSystemService(UserManager.class);
             if (userManager.isManagedProfile()) {
                 return ProfileType.Managed;

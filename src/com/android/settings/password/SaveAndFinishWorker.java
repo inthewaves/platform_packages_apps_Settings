@@ -224,7 +224,7 @@ public class SaveAndFinishWorker extends Fragment {
         }
     }
 
-    interface Listener {
+    public interface Listener {
         void onChosenLockSaveFinished(boolean wasSecureBefore, Intent resultData);
     }
 }

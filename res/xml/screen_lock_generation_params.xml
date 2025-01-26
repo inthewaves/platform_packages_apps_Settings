@@ -1,0 +1,19 @@
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:settings="http://schemas.android.com/apk/res-auto"
+    android:persistent="false"
+    settings:searchable="false">
+
+    <com.android.settings.widget.LabeledSeekBarPreference
+        android:key="generation_length"
+        settings:searchable="false"
+        settings:iconEnd="@drawable/ic_add_24dp"
+        settings:iconStart="@drawable/ic_remove_24dp"
+        />
+
+    <com.android.settingslib.widget.FooterPreference
+        android:key="warning_footer"
+        android:selectable="false"
+        android:visibility="gone"
+        settings:searchable="false"/>
+</PreferenceScreen>

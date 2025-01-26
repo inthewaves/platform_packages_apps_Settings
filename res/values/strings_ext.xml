@@ -220,4 +220,68 @@ Duress PIN works the same way duress password does."</string>
     <string name="app_play_integrity_api_not_blocked">Not blocked</string>
     <string name="app_play_integrity_see_all_apps">Show apps that used the Play Integrity API</string>
 
+    <string name="lock_screen_generate_passphrase_info">A 4-8 word diceware passphrase provides strong protection for your device.</string>
+    <string name="lock_screen_generate_pin_info">A 6-8 digit PIN provides strong protection for your device via the secure element; however, it will not withstand a secure element compromise. If this is unacceptable, use a long diceware passphrase instead.</string>
+    <string name="lock_screen_choice_generate_pref_recommended_category_title">Recommended</string>
+    <string name="lock_screen_choice_generate_pref_other_category_title">Other</string>
+    <string name="lock_screen_choice_generate_pref_pin_title">Generate PIN</string>
+    <string name="lock_screen_choice_generate_pref_pin_summary_d_to_d_digits">%1$d-%2$d digits, randomly generated</string>
+    <string name="lock_screen_choice_manual_pref_pin">Use your own PIN</string>
+    <string name="lock_screen_choice_generate_pref_passphrase_title">Generate diceware passphrase</string>
+    <string name="lock_screen_choice_generate_pref_passphrase_summary_d_to_d_words">%1$d-%2$d words, randomly chosen from wordlist</string>
+    <string name="lock_screen_choice_manual_pref_passphrase">Use your own password</string>
+    <string name="lock_screen_choice_disabled_due_to_device_policy_summary">Disabled due to device password requirements</string>
+    <string name="lock_screen_generate_choice_footer_pin">The secure element (Titan M chip) helps protect against brute-force attacks against disk encryption through hardware-based delays. This makes even randomly generated 6-digit PINs highly secure.</string>
+    <string name="lock_screen_generate_choice_footer_password">The secure element (Titan M chip) helps protect against brute-force attacks against disk encryption through hardware-based delays.</string>
+    <string name="lock_screen_generate_choice_learn_more_link">Learn more secure element and disk encryption</string>
+    <!-- Dialog shown when user presses the Learn more link in the footer. (Reference: https://grapheneos.org/faq#encryption) -->
+    <string name="lock_screen_generate_learn_more_dialog_title">Secure element</string>
+    <string name="lock_screen_generate_learn_more_dialog_body">
+"The secure element (Titan M on Pixels) is a tamper-resistant discrete security chip, and it helps increases the time and cost of breaking encryption significantly via hardware-based delays for key derivation.
+
+It is extremely unlikely that the chip's security has been bypassed; the firmware has low attack surface, and tamper resistance makes physical tampering difficult.
+
+However, if you cannot depend on these hardware-based security features (e.g. you have adversaries that have substantial resources and can gain physical possession of your device), use a strong passphrase for encryption such as a random diceware passphrase of 7 words or more. Consider also turning on auto reboot to keep data at rest when the device is unattended.
+
+Disk encryption
+
+Disk encryption keys are randomly generated with a high quality CSPRNG (cryptographically secure pseudorandom number generator) and stored encrypted with a key encryption key. Key encryption keys are derived at runtime and are never stored anywhere.
+
+The system derives a password token from your screen lock using scrypt, and the token is used as the main input for key derivation.
+
+The system also stores a high entropy random value (Weaver token) on the secure element and uses it as another input for key derivation. The Weaver token is stored alongside a Weaver key derived by the system from the password token.
+
+In order to retrieve the Weaver token, the secure element requires the correct Weaver key. A secure internal timer is used to implement hardware-based delays for each attempt at key derivation. It quickly ramps up to 1-day delays before the next attempt."</string>
+
+    <string name="lock_screen_generate_options_title_pin">Generate PIN</string>
+    <string name="lock_screen_generate_options_desc_pin">Multiple PINs will be randomly generated, and you will be asked to choose one for your screen lock.</string>
+    <string name="lock_screen_generate_options_title_passphrase">Generate diceware passphrase</string>
+    <string name="lock_screen_generate_options_desc_passphrase">Multiple passphrases will be randomly generated, and you will be asked to choose one for your screen lock.</string>
+    <string name="lock_screen_generate_options_length_slider_title_pin">PIN length</string>
+    <string name="lock_screen_generate_options_length_slider_summary_pin">%1$d digits</string>
+    <string name="lock_screen_generate_options_length_slider_title_passphrase">Passphrase length</string>
+    <string name="lock_screen_generate_options_length_slider_summary_passphrase">%1$d words</string>
+    <string name="lock_screen_generate_options_next_button">Next</string>
+    <string name="lock_screen_generate_options_regenerate_button">Generate new</string>
+    <string name="lock_screen_generate_options_confirm_button">Confirm</string>
+    <string name="lock_screen_generate_options_warning_footer_lose_entropy_d_to_d">Warning: Some passphrases over %1$s words can exceed the max password length of %2$s and won\'t be included in generation, which results in a loss of entropy.</string>
+
+    <string name="lock_screen_generate_show_generated_error_message_s">Error generating passphrases: %1$s</string>
+    <string name="lock_screen_generate_show_generated_error_device_requirements_too_strict_s">Device password requirements too strict (%1$s)</string>
+    <string name="lock_screen_generate_show_generated_title_pin">Select a PIN</string>
+    <string name="lock_screen_generate_show_generated_desc_pin_d_pins_been_gen">%1$d PINs have been generated. Select one to use as your screen lock. You should memorize your selection.</string>
+    <string name="lock_screen_generate_show_generated_title_passphrase">Select passphrase</string>
+    <string name="lock_screen_generate_show_generated_desc_passphrase_d_passphrases_been_gen">%1$d passphrases have been generated. Select one to use as your screen lock. You should memorize your passphrase or write it down in a safe place..</string>
+
+    <string name="lock_screen_generate_confirm_title_pin">Confirm your PIN</string>
+    <string name="lock_screen_generate_confirm_desc_pin">This PIN will be used as your screen lock. Make sure you remember this PIN.</string>
+    <string name="lock_screen_generate_confirm_title_passphrase">Confirm your passphrase</string>
+    <string name="lock_screen_generate_confirm_desc_passphrase">This passphrase will be used as your screen lock. Make sure you remember or securely write down this passphrase.</string>
+    <string name="lock_screen_generate_confirm_again_title_pin">Re-enter your PIN</string>
+    <string name="lock_screen_generate_confirm_again_desc_pin">Enter your PIN again to ensure you\'ve memorized it for your screen lock.</string>
+    <string name="lock_screen_generate_confirm_last_desc_pin">Enter your PIN one more time to confirm it as your screen lock.</string>
+    <string name="lock_screen_generate_confirm_again_title_passphrase">Re-enter your passphrase</string>
+    <string name="lock_screen_generate_confirm_again_desc_passphrase">Enter your passphrase again to ensure you\'ve memorized it.</string>
+    <string name="lock_screen_generate_confirm_last_desc_passphrase">Enter your passphrase one more time to confirm it as your screen lock.</string>
+    <string name="lock_screen_generate_confirm_passphrases_dont_match">Passphrases don\'t match</string>
 </resources>
