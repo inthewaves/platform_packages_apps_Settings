@@ -35,6 +35,12 @@ class PasswordComplexityTest {
     fun testFromLevel() {
         assertThat(
             PasswordComplexity.fromLevel(
+                DevicePolicyManager.PASSWORD_COMPLEXITY_NONE,
+                minLevel = PasswordComplexity.HIGH
+            )
+        ).isEqualTo(PasswordComplexity.HIGH)
+        assertThat(
+            PasswordComplexity.fromLevel(
                 DevicePolicyManager.PASSWORD_COMPLEXITY_LOW,
                 minLevel = PasswordComplexity.HIGH
             )
@@ -57,6 +63,25 @@ class PasswordComplexityTest {
                 minLevel = PasswordComplexity.MEDIUM
             )
         ).isEqualTo(PasswordComplexity.HIGH)
+
+        assertThat(
+            PasswordComplexity.fromLevel(
+                DevicePolicyManager.PASSWORD_COMPLEXITY_MEDIUM,
+                minLevel = PasswordComplexity.MEDIUM
+            )
+        ).isEqualTo(PasswordComplexity.MEDIUM)
+        assertThat(
+            PasswordComplexity.fromLevel(
+                DevicePolicyManager.PASSWORD_COMPLEXITY_LOW,
+                minLevel = PasswordComplexity.MEDIUM
+            )
+        ).isEqualTo(PasswordComplexity.MEDIUM)
+        assertThat(
+            PasswordComplexity.fromLevel(
+                DevicePolicyManager.PASSWORD_COMPLEXITY_NONE,
+                minLevel = PasswordComplexity.NONE
+            )
+        ).isEqualTo(PasswordComplexity.NONE)
     }
     
     enum class ExpectError {

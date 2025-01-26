@@ -12,6 +12,7 @@ enum class PasswordComplexity(
     @get:Keep
     val alphaNumericLength: Int
 ) {
+    NONE(DevicePolicyManager.PASSWORD_COMPLEXITY_NONE, 0, 0),
     LOW(DevicePolicyManager.PASSWORD_COMPLEXITY_LOW, 0, 0),
     MEDIUM(DevicePolicyManager.PASSWORD_COMPLEXITY_MEDIUM, 4, 4),
     HIGH(DevicePolicyManager.PASSWORD_COMPLEXITY_HIGH, 8, 6);
@@ -19,6 +20,8 @@ enum class PasswordComplexity(
     companion object {
         fun fromLevel(level: Int, minLevel: PasswordComplexity) =
             when (level) {
+                DevicePolicyManager.PASSWORD_COMPLEXITY_NONE -> NONE
+                DevicePolicyManager.PASSWORD_COMPLEXITY_LOW -> LOW
                 DevicePolicyManager.PASSWORD_COMPLEXITY_MEDIUM -> MEDIUM
                 DevicePolicyManager.PASSWORD_COMPLEXITY_HIGH -> HIGH
                 else -> minLevel
