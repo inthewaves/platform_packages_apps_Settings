@@ -9,11 +9,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.internal.widget.LockPatternUtils
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -22,7 +17,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -247,47 +241,116 @@ class GenerateLockPasswordTest {
     }
 
     @Test
-    fun testFullRun(): Unit = testScope.runTest {
+    fun testFullRunOfAllTypesAndSize() = testScope.runTest {
+        // In JUnit4, parametrized tests aren't easy to run
+        val wordList: Set<String> =
+            DicewareWordList.loadWords(mContext, testDispatcher).wordList().toSet()
+
+        for (passType in GenerateLockPasswordViewModel.PassType.entries) {
+            val (minSize, maxSize) = when (passType) {
+                GenerateLockPasswordViewModel.PassType.Pin -> {
+                    PinGenParams.DEFAULT_MIN_DIGITS to PinGenParams.DEFAULT_MAX_DIGITS
+                }
+                GenerateLockPasswordViewModel.PassType.Passphrase -> {
+                    DicewarePassphraseGenParams.MIN_WORDS to DicewarePassphraseGenParams.MAX_WORDS
+                }
+            }
+
+            for (size in minSize..maxSize) {
+                try {
+                    doFullRun(wordList, passType, size)
+                } catch (e: Exception) {
+                    throw AssertionError("failed with $passType, size $size", e)
+                }
+            }
+        }
+    }
+
+    private fun TestScope.doFullRun(
+        wordList: Set<String>,
+        passType: GenerateLockPasswordViewModel.PassType,
+        passwordSize: Int
+    ) {
         val viewModel = GenerateLockPasswordViewModel(
             application = mContext as Application,
             backgroundDispatcher = testDispatcher,
             ioDispatcher = testDispatcher,
         )
-        viewModel.setup(isAlphabeticalMode = false, defaultMinMetrics, defaultMinComplexity)
-        advanceUntilIdle()
-        advanceAndAssertToViewOptionsStage(viewModel)
+        val isPassphrase = passType == GenerateLockPasswordViewModel.PassType.Passphrase
 
-        val generatedPins = viewModel.generatedPasswords.value
-        require(generatedPins is GenerateLockPasswordViewModel.GenerateState.Loaded) {
-            "expected generation, but got state $generatedPins"
+        viewModel.setup(isAlphabeticalMode = isPassphrase, defaultMinMetrics, defaultMinComplexity)
+        advanceUntilIdle()
+        assertThat(viewModel.stage.value).isInstanceOf(PassGenStage.ChooseGeneratedOrManual::class.java)
+
+        viewModel.primaryButtonClicked()
+        advanceUntilIdle()
+        assertThat(viewModel.stage.value).isInstanceOf(PassGenStage.ChooseParams::class.java)
+
+        viewModel.setNewLength(passwordSize)
+        advanceUntilIdle()
+
+        viewModel.primaryButtonClicked()
+        advanceUntilIdle()
+        assertThat(viewModel.stage.value).isInstanceOf(PassGenStage.ShowMultiple::class.java)
+
+        var previousList: List<GeneratedPassword>? = null
+
+        repeat(50) { iteration ->
+            if (previousList != null) {
+                viewModel.generateNewPasswords()
+                advanceUntilIdle()
+            }
+
+            val generated = viewModel.generatedPasswords.value
+            require(generated is GenerateLockPasswordViewModel.GenerateState.Loaded) {
+                "expected generation, but got state $generated"
+            }
+
+            assertThat(viewModel.generationCount).isEqualTo(iteration + 1)
+            assertThat(generated).isNotNull()
+            if (previousList != null) {
+                assertThat(previousList).isNotEqualTo(generated.list)
+            }
+            previousList = generated.listOrNull()
+            assertThat(viewModel.isPrimaryButtonEnabled.value).isFalse()
+            assertThat(viewModel.selectedPassword.value).isNull()
+            if (isPassphrase) {
+                for (genPassphrase in generated.list) {
+                    check(genPassphrase is GeneratedPassphrase) { "expected passphrase" }
+                    val wordCount = genPassphrase.passphrase
+                        .splitToSequence(' ')
+                        .count()
+                    assertThat(wordCount).isEqualTo(passwordSize)
+
+                    for (word in genPassphrase.passphrase.splitToSequence(' ')) {
+                        assertThat(wordList).contains(word)
+                    }
+                }
+            } else {
+                assertThat(generated.list.all { it is GeneratedPin }).isTrue()
+                assertThat(generated.list.all { (it as GeneratedPin).pin.length == passwordSize }).isTrue()
+            }
+
+            for (i in generated.list.indices) {
+                val selected = generated.list[i]
+                viewModel.setSelectedPassword(i)
+                advanceUntilIdle()
+                val selection = requireNotNull(viewModel.selectedPassword.value)
+                assertThat(selection).isInstanceOf(GenerateLockPasswordViewModel.Selection.IndexOnly::class.java)
+                assertThat(selection.index).isEqualTo(i)
+                assertThat(viewModel.getPassword(selection)).isEqualTo(selected)
+                assertThat(viewModel.isPrimaryButtonEnabled.value).isTrue()
+            }
         }
 
-        assertThat(viewModel.generationCount).isEqualTo(1)
-        assertThat(generatedPins).isNotNull()
-        assertThat(generatedPins.size).isGreaterThan(0)
-        assertThat(generatedPins.list.all { it is GeneratedPin }).isTrue()
-        delay(50L)
-        assertThat(viewModel.isPrimaryButtonEnabled.value).isFalse()
-        assertThat(viewModel.selectedPassword.value).isNull()
-        val oldFirst = generatedPins.list[0] as GeneratedPin
-        viewModel.setSelectedPassword(0)
-        advanceUntilIdle()
-        val selection = requireNotNull(viewModel.selectedPassword.value)
-        assertThat(selection)
-            .isInstanceOf(GenerateLockPasswordViewModel.Selection.IndexOnly::class.java)
-        assertThat(selection.index).isEqualTo(0)
-        assertThat(viewModel.getPassword(selection)).isEqualTo(oldFirst)
-        assertThat(viewModel.isPrimaryButtonEnabled.value).isTrue()
         viewModel.generateNewPasswords()
         advanceUntilIdle()
 
-        val generatedPinsAgain = viewModel.generatedPasswords.value
-        require(generatedPinsAgain is GenerateLockPasswordViewModel.GenerateState.Loaded) {
-            "expected generation, but got state $generatedPinsAgain"
+        val finalGenerated = viewModel.generatedPasswords.value
+        require(finalGenerated is GenerateLockPasswordViewModel.GenerateState.Loaded) {
+            "expected generation, but got state $finalGenerated"
         }
-        assertThat(viewModel.generationCount).isEqualTo(2)
-        assertThat(generatedPinsAgain).isNotNull()
-        assertThat(generatedPins.list).isNotEqualTo(generatedPinsAgain.list)
+        assertThat(finalGenerated).isNotNull()
         assertThat(viewModel.selectedPassword.value).isNull()
 
         viewModel.primaryButtonClicked()
@@ -299,14 +362,19 @@ class GenerateLockPasswordTest {
         val actualSelection = viewModel.getPassword(
             requireNotNull(viewModel.selectedPassword.value)
         )
-        require(actualSelection is GeneratedPin)
+        requireNotNull(actualSelection)
 
         viewModel.primaryButtonClicked()
         advanceUntilIdle()
         assertThat(viewModel.stage.value).isEqualTo(PassGenStage.Confirmation.ConfirmWithVisible)
         assertThat(viewModel.confirmError.value).isNull()
         assertThat(viewModel.isPrimaryButtonEnabled.value).isFalse()
-        val wrongInput = actualSelection.pin + "1"
+        val actualInput = when (actualSelection) {
+            is GeneratedPassphrase -> actualSelection.passphrase
+            is GeneratedPin -> actualSelection.pin
+            else -> error("unreachable")
+        }
+        val wrongInput = actualInput + "1"
         viewModel.setInputLength(wrongInput.length)
         advanceUntilIdle()
         assertThat(viewModel.isPrimaryButtonEnabled.value).isTrue()
@@ -316,28 +384,28 @@ class GenerateLockPasswordTest {
         assertThat(viewModel.confirmError.value).isEqualTo(GenerateLockPasswordViewModel.ConfirmError.DOESNT_MATCH)
         assertThat(viewModel.isPrimaryButtonEnabled.value).isTrue()
 
-        viewModel.setInputLength(actualSelection.pin.length)
+        viewModel.setInputLength(actualInput.length)
         advanceUntilIdle()
-        viewModel.primaryButtonClicked(actualSelection.pin)
+        viewModel.primaryButtonClicked(actualInput)
         advanceUntilIdle()
         assertThat(viewModel.confirmError.value).isNull()
         assertThat(viewModel.stage.value).isEqualTo(PassGenStage.Confirmation.ConfirmWithoutVisible)
         assertThat(viewModel.isPrimaryButtonEnabled.value).isFalse()
 
-        viewModel.setInputLength(actualSelection.pin.length)
+        viewModel.setInputLength(actualInput.length)
         advanceUntilIdle()
         assertThat(viewModel.isPrimaryButtonEnabled.value).isTrue()
-        viewModel.primaryButtonClicked(actualSelection.pin)
+        viewModel.primaryButtonClicked(actualInput)
         advanceUntilIdle()
 
         assertThat(viewModel.stage.value).isEqualTo(PassGenStage.Confirmation.ConfirmLast)
         assertThat(viewModel.saveRequest.value).isEqualTo(GenerateLockPasswordViewModel.SaveRequest.Inactive)
         assertThat(viewModel.isPrimaryButtonEnabled.value).isFalse()
 
-        viewModel.setInputLength(actualSelection.pin.length)
+        viewModel.setInputLength(actualInput.length)
         advanceUntilIdle()
         assertThat(viewModel.isPrimaryButtonEnabled.value).isTrue()
-        viewModel.primaryButtonClicked(actualSelection.pin)
+        viewModel.primaryButtonClicked(actualInput)
         advanceUntilIdle()
         val request = viewModel.saveRequest.value
         require(request is GenerateLockPasswordViewModel.SaveRequest.Requested) {

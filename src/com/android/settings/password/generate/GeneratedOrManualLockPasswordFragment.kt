@@ -208,11 +208,16 @@ class GeneratedOrManualLockPasswordFragment : BaseLockPasswordGenerationPreferen
             }
             KEY_USE_OWN_CREDENTIAL -> {
                 // Launch the original PIN/password input activity
+                //
+                // Note: We don't use SetupChooseLockPassword here for a setup wizard flow,
+                // because it doesn't do anything different in terms of return codes, and that
+                // would be redundant, since we already show the skip and choose lock screen types
+                // on this fragment anyway.
                 val intent = ChooseLockPassword.IntentBuilder(context).build()
                 // Allow ChooseLockGeneric to get the original extras
                 intent.putExtras(activity!!.intent)
                 // ChooseLockPassword was the original activity and has its own result codes that it
-                // wants to send back to ChooseLockGeneric
+                // wants to send back to ChooseLockGeneric (SetupChooseLockGeneric for SetupWizard)
                 intent.addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT)
 
                 activity!!.startActivity(intent)
@@ -230,8 +235,9 @@ class GeneratedOrManualLockPasswordFragment : BaseLockPasswordGenerationPreferen
         if (lock == currentLockType) {
             return
         }
-        // while we could dynamically set the lock type using the viewmodel, easier to just follow
-        // how it's done in SetupLockPassword
+        // While we could dynamically set the lock type using the viewmodel, easier to just follow
+        // how it's done in SetupLockPassword. This will ensure the intent's data is updated for
+        // the new lock type as well for better consistency.
         startChooseLockActivity(lock, activity)
     }
 
