@@ -94,13 +94,17 @@ class ConfirmGeneratedLockPassFragment : BaseLockPasswordGenerationFragment(
         passwordEntry?.setText("")
 
         if (!wasSecureBefore) {
-            if (WizardManagerHelper.isAnySetupWizard(activity!!.intent)) {
+            //if (WizardManagerHelper.isAnySetupWizard(activity!!.intent)) {
                 // Setup wizard's redaction interstitial is deferred to optional step. Enable that
                 // optional step if the lock screen was set up.
-                SetupRedactionInterstitial.setEnabled(context, true)
-            } else {
-                startActivity(RedactionInterstitial.createStartIntent(activity, mUserId))
-            }
+                // SetupRedactionInterstitial.setEnabled(context, true)
+            //} else {
+            // Always show lock screen notification RedactionInterstitial, even if in SetupWizard.
+            // Current SetupWizard2 doesn't call the optional component
+            // If we use the Settings app's LOCK_SCREEN_REDACTION intent inside of SetupWizard, can
+            // uncomment this check
+            startActivity(RedactionInterstitial.createStartIntent(activity, mUserId))
+           // }
         }
 
         layout?.announceForAccessibility(getString(R.string.accessibility_setup_password_complete))
