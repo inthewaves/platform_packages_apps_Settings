@@ -5,6 +5,13 @@
     android:key="screen_lock_generation_choice_screen"
     android:persistent="false">
 
+    <Preference
+        android:key="choose_screen_lock"
+        android:title="@string/setup_lock_settings_options_button_label"
+        android:icon="@drawable/ic_lock"
+        android:visibility="gone"
+        android:persistent="false"/>
+
     <PreferenceCategory
         android:key="recommended_category"
         android:persistent="false"

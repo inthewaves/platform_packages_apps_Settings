@@ -10,16 +10,28 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.preference.Preference
+import com.android.internal.widget.LockPatternUtils
 import com.android.settings.R
 import com.android.settings.Utils
+import com.android.settings.password.ChooseLockGeneric
+import com.android.settings.password.ChooseLockGenericController
 import com.android.settings.password.ChooseLockPassword
 import com.android.settings.password.ChooseLockPassword.ChooseLockPasswordFragment
 import com.android.settings.password.ChooseLockSettingsHelper
+import com.android.settings.password.ChooseLockTypeDialogFragment
+import com.android.settings.password.ConfirmDeviceCredentialUtils
+import com.android.settings.password.ScreenLockType
+import com.android.settings.password.SetupChooseLockPassword.SetupChooseLockPasswordFragment
+import com.android.settings.password.SetupSkipDialog
 import com.android.settingslib.widget.FooterPreference
+import com.google.android.setupcompat.template.FooterBarMixin
+import com.google.android.setupcompat.template.FooterButton
+import com.google.android.setupcompat.util.WizardManagerHelper
 import com.google.android.setupdesign.GlifPreferenceLayout
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 
+private const val KEY_CHOOSE_SCREEN_LOCK = "choose_screen_lock"
 private const val KEY_USE_GENERATED_CREDENTIAL = "use_generated_credential"
 private const val KEY_USE_OWN_CREDENTIAL = "use_own_credential"
 private const val KEY_FOOTER = "footer_screen_lock_creation_choice"
@@ -27,11 +39,20 @@ private const val KEY_FOOTER = "footer_screen_lock_creation_choice"
 class GeneratedOrManualLockPasswordFragment : BaseLockPasswordGenerationPreferenceFragment(
     prefResId = R.xml.screen_lock_creation_choice,
     shouldGcOnDestroy = false,
-) {
+), ChooseLockTypeDialogFragment.OnLockTypeSelectedListener {
+    var mUserId = 0
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        mUserId = Utils.getUserIdFromBundle(activity, intent.extras)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val layout = view as GlifPreferenceLayout
+
+        setupForOptionsAndPossibleSetupWizardSkip(layout)
 
         val intent = activity!!.intent
         val footer = findPreference<FooterPreference>(KEY_FOOTER)!!
@@ -113,27 +134,105 @@ class GeneratedOrManualLockPasswordFragment : BaseLockPasswordGenerationPreferen
         }
     }
 
+    // From SetupChooseLockPassword
+    private fun setupForOptionsAndPossibleSetupWizardSkip(layout: GlifPreferenceLayout) {
+        val chooseLockGenericController = ChooseLockGenericController.Builder(activity, mUserId)
+            .setHideInsecureScreenLockTypes(true)
+            .build()
+        val anyOptionsShown = chooseLockGenericController.visibleAndEnabledScreenLockTypes.size > 0
+        val showOptionsButton = activity!!.intent.getBooleanExtra(
+            ChooseLockGeneric.ChooseLockGenericFragment.EXTRA_SHOW_OPTIONS_BUTTON, false
+        )
+        val optionsPref = findPreference<Preference>(KEY_CHOOSE_SCREEN_LOCK)
+        optionsPref?.isVisible = showOptionsButton && anyOptionsShown
+
+        if (WizardManagerHelper.isAnySetupWizard(intent)) {
+            val footerBarMixin = layout.getMixin(FooterBarMixin::class.java)
+            footerBarMixin.secondaryButton =
+                FooterButton.Builder(requireContext())
+                    .setText(R.string.skip_label)
+                    .setListener { onSkipClicked() }
+                    .setButtonType(FooterButton.ButtonType.CLEAR)
+                    .setTheme(com.google.android.setupdesign.R.style.SudGlifButton_Secondary)
+                    .build()
+        }
+    }
+
+    // From SetupChooseLockPassword
+    private fun onSkipClicked() {
+        val intent = activity!!.intent
+        val frpSupported = intent
+            .getBooleanExtra(SetupSkipDialog.EXTRA_FRP_SUPPORTED, false)
+        val forFingerprint = intent
+            .getBooleanExtra(
+                ChooseLockSettingsHelper.EXTRA_KEY_FOR_FINGERPRINT,
+                false
+            )
+        val forFace = intent
+            .getBooleanExtra(ChooseLockSettingsHelper.EXTRA_KEY_FOR_FACE, false)
+        val forBiometrics = intent
+            .getBooleanExtra(
+                ChooseLockSettingsHelper.EXTRA_KEY_FOR_BIOMETRICS,
+                false
+            )
+        val isAlphaMode = viewModel.passType.value == GenerateLockPasswordViewModel.PassType.Passphrase
+        val dialog = SetupSkipDialog.newInstance(
+            if (isAlphaMode) LockPatternUtils.CREDENTIAL_TYPE_PASSWORD else LockPatternUtils.CREDENTIAL_TYPE_PIN,
+            frpSupported,
+            forFingerprint,
+            forFace,
+            forBiometrics,
+            WizardManagerHelper.isAnySetupWizard(intent)
+        )
+
+        ConfirmDeviceCredentialUtils.hideImeImmediately(
+            activity!!.window.decorView
+        )
+
+        dialog.show(childFragmentManager)
+    }
+
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
-        val key = preference.key
+        return when (preference.key) {
+            KEY_CHOOSE_SCREEN_LOCK -> {
+                ChooseLockTypeDialogFragment.newInstance(mUserId)
+                    .show(
+                        childFragmentManager,
+                        SetupChooseLockPasswordFragment.TAG_SKIP_SCREEN_LOCK_DIALOG
+                    )
+                true
+            }
+            KEY_USE_GENERATED_CREDENTIAL -> {
+                viewModel.primaryButtonClicked()
+                true
+            }
+            KEY_USE_OWN_CREDENTIAL -> {
+                // Launch the original PIN/password input activity
+                val intent = ChooseLockPassword.IntentBuilder(context).build()
+                // Allow ChooseLockGeneric to get the original extras
+                intent.putExtras(activity!!.intent)
+                // ChooseLockPassword was the original activity and has its own result codes that it
+                // wants to send back to ChooseLockGeneric
+                intent.addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT)
 
-        if (KEY_USE_GENERATED_CREDENTIAL == key) {
-            viewModel.primaryButtonClicked()
-            return true
+                activity!!.startActivity(intent)
+                activity!!.finish()
+                true
+            }
+            else -> false
         }
-        if (KEY_USE_OWN_CREDENTIAL == key) {
-            // Launch the original PIN/password input activity
-            val intent = ChooseLockPassword.IntentBuilder(context).build()
-            // Allow ChooseLockGeneric to get the original extras
-            intent.putExtras(activity!!.intent)
-            // ChooseLockPassword was the original activity and has its own result codes that it
-            // wants to send back to ChooseLockGeneric
-            intent.addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT)
+    }
 
-            activity!!.startActivity(intent)
-            activity!!.finish()
-            return true
+    // from SetupLockPassword
+    override fun onLockTypeSelected(lock: ScreenLockType?) {
+        val isAlpha = viewModel.passType.value == GenerateLockPasswordViewModel.PassType.Passphrase
+        val currentLockType = if (isAlpha) ScreenLockType.PASSWORD else ScreenLockType.PIN
+        if (lock == currentLockType) {
+            return
         }
-        return false
+        // while we could dynamically set the lock type using the viewmodel, easier to just follow
+        // how it's done in SetupLockPassword
+        startChooseLockActivity(lock, activity)
     }
 
     private fun setupPrefIntroAndButtons(
@@ -188,9 +287,8 @@ class GeneratedOrManualLockPasswordFragment : BaseLockPasswordGenerationPreferen
             ChooseLockPasswordFragment.Stage.TYPE_NONE
         }
 
-        val userId = Utils.getUserIdFromBundle(activity, intent.extras)
         val profileType = ChooseLockPasswordFragment.getProfileType(
-            context, userId
+            context, mUserId
         )
         val hint = ChooseLockPasswordFragment.Stage.Introduction.getHint(
             context, isAlphaMode, stageType, profileType

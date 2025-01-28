@@ -6,9 +6,9 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.UserHandle
 import android.text.Editable
-import android.text.Spannable
-import android.text.Selection
 import android.text.InputType
+import android.text.Selection
+import android.text.Spannable
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
@@ -25,6 +25,7 @@ import com.android.internal.widget.LockPatternUtils
 import com.android.internal.widget.LockscreenCredential
 import com.android.internal.widget.TextViewInputDisabler
 import com.android.settings.R
+import com.android.settings.SetupRedactionInterstitial
 import com.android.settings.Utils
 import com.android.settings.notification.RedactionInterstitial
 import com.android.settings.password.ChooseLockPassword.ChooseLockPasswordFragment
@@ -34,6 +35,7 @@ import com.android.settings.password.PasswordRequirementAdapter
 import com.android.settings.password.SaveAndFinishWorker
 import com.google.android.setupcompat.template.FooterBarMixin
 import com.google.android.setupcompat.template.FooterButton
+import com.google.android.setupcompat.util.WizardManagerHelper
 import com.google.android.setupdesign.GlifLayout
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -92,9 +94,12 @@ class ConfirmGeneratedLockPassFragment : BaseLockPasswordGenerationFragment(
         passwordEntry?.setText("")
 
         if (!wasSecureBefore) {
-            val intent: Intent = RedactionInterstitial.createStartIntent(activity, mUserId)
-            if (intent != null) {
-                startActivity(intent)
+            if (WizardManagerHelper.isAnySetupWizard(activity!!.intent)) {
+                // Setup wizard's redaction interstitial is deferred to optional step. Enable that
+                // optional step if the lock screen was set up.
+                SetupRedactionInterstitial.setEnabled(context, true)
+            } else {
+                startActivity(RedactionInterstitial.createStartIntent(activity, mUserId))
             }
         }
 

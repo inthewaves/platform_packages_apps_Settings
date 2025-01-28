@@ -75,7 +75,7 @@ public class SetupChooseLockPassword extends ChooseLockPassword {
     public static class SetupChooseLockPasswordFragment extends ChooseLockPasswordFragment
             implements OnLockTypeSelectedListener {
 
-        private static final String TAG_SKIP_SCREEN_LOCK_DIALOG = "skip_screen_lock_dialog";
+        public static final String TAG_SKIP_SCREEN_LOCK_DIALOG = "skip_screen_lock_dialog";
 
         @Nullable
         private Button mOptionsButton;
