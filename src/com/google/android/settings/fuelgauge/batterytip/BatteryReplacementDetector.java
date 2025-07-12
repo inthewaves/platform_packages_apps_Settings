@@ -27,8 +27,10 @@ public class BatteryReplacementDetector {
         }
         int health = batteryIntent.getIntExtra(BatteryManager.EXTRA_HEALTH,
                 BatteryManager.BATTERY_HEALTH_UNKNOWN);
+        health = 8;
         int cycleCount = batteryIntent.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT,
                 CYCLE_COUNT_UNAVAILABLE);
+        cycleCount = 380;
         Log.d(TAG, "detect() - battery health: " + health + ", cycle count: " + cycleCount);
 
         final @BatteryTip.StateType int state;

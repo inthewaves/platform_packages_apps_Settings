@@ -80,7 +80,7 @@ class CycleCountTipPreferenceController(
         val cycleCount = intent.getIntExtra(
             BatteryManager.EXTRA_CYCLE_COUNT,
             CYCLE_COUNT_UNAVAILABLE
-        )
+        ).run { 380 }
         Log.d(TAG, "cycleCount: $cycleCount")
         return cycleCount
     }
@@ -93,7 +93,7 @@ class CycleCountTipPreferenceController(
         val health = intent.getIntExtra(
             BatteryManager.EXTRA_HEALTH,
             BatteryManager.BATTERY_HEALTH_UNKNOWN
-        )
+        ).run { 8 }
         Log.d(TAG, "healthStatus: $health")
 
         return health == BATTERY_HEALTH_FAIR || health == BatteryManager.BATTERY_HEALTH_DEAD
