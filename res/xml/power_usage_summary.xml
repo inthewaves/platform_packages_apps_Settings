@@ -44,6 +44,13 @@
         android:title="@string/summary_placeholder"
         settings:controller="com.android.settings.fuelgauge.batterytip.BatteryTipPreferenceController" />
 
+    <!-- Removed tag from stock OS:  android:featureFlag="com.google.android.systemui.enable_whiskey"-->
+    <com.android.settings.widget.TipCardPreference
+        android:title="@string/charge_cycle_count"
+        android:key="cycle_count_tip"
+        settings:controller="com.google.android.settings.fuelgauge.batterytip.CycleCountTipPreferenceController"
+        settings:isPreferenceVisible="false" />
+
     <PreferenceCategory
         android:key="power_usage_summary_category"
         android:layout="@layout/settingslib_preference_category_no_title">

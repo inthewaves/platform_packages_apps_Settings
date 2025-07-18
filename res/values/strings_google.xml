@@ -7,6 +7,7 @@
     <string name="charging_optimization_remaining_time_label"/>
     <string name="touch_sensitivity_title"/>
     <string name="touch_sensitivity_summary"/>
+    <string name="charge_cycle_count"/>
 
     <!-- SettingsIntelligenceGoogle -->
     <string name="charge_limit_indexing_keywords"/>
