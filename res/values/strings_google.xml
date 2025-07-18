@@ -8,6 +8,8 @@
     <string name="touch_sensitivity_title"/>
     <string name="touch_sensitivity_summary"/>
     <string name="charge_cycle_count"/>
+    <string name="battery_tip_early_replacement_summary"/>
+    <!-- battery_tip_replacement_summary already exists in AOSP -->
 
     <!-- SettingsIntelligenceGoogle -->
     <string name="charge_limit_indexing_keywords"/>

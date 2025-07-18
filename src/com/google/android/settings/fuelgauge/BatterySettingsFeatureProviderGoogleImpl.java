@@ -7,8 +7,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.android.settings.R;
+import com.android.settings.fuelgauge.BatteryInfo;
 import com.android.settings.fuelgauge.BatterySettingsFeatureProviderImpl;
+import com.android.settings.fuelgauge.batterytip.BatteryTipPolicy;
+import com.android.settings.fuelgauge.batterytip.tips.BatteryTip;
 import com.android.settingslib.utils.PowerUtil;
+
+import com.google.android.settings.fuelgauge.batterytip.BatteryReplacementDetector;
+
+import java.util.List;
 
 // based on code from SettingsGoogle app
 public class BatterySettingsFeatureProviderGoogleImpl extends BatterySettingsFeatureProviderImpl {
@@ -57,5 +64,14 @@ public class BatterySettingsFeatureProviderGoogleImpl extends BatterySettingsFea
                     batteryPercentageString, targetTime);
         }
         return null;
+    }
+
+    @Override
+    public void addBatteryTipDetector(Context context, List<BatteryTip> batteryTips,
+            BatteryInfo batteryInfo, BatteryTipPolicy batteryTipPolicy) {
+        super.addBatteryTipDetector(context, batteryTips, batteryInfo, batteryTipPolicy);
+        if (Utils.isBarrelRequiredDevice(context)) {
+            batteryTips.addFirst(new BatteryReplacementDetector(context).detect());
+        }
     }
 }
