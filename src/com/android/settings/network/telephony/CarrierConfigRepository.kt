@@ -33,7 +33,7 @@ class CarrierConfigRepository(private val context: Context) {
     private val carrierConfigManager: CarrierConfigManager? =
         context.getSystemService(CarrierConfigManager::class.java)
 
-    private enum class KeyType {
+    enum class KeyType {
         BOOLEAN,
         INT,
         INT_ARRAY,

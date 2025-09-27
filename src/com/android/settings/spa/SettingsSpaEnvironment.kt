@@ -48,6 +48,7 @@ import com.android.settings.spa.core.instrumentation.SpaLogMetricsProvider
 import com.android.settings.spa.development.UsageStatsPageProvider
 import com.android.settings.spa.development.compat.PlatformCompatAppListPageProvider
 import com.android.settings.spa.home.HomePageProvider
+import com.android.settings.network.telephony.carriersettingsoverride.CarrierSettingsOverridesProvider
 import com.android.settings.spa.network.NetworkAndInternetPageProvider
 import com.android.settings.spa.network.NetworkCellularGroupProvider
 import com.android.settings.spa.network.SimOnboardingPageProvider
@@ -135,6 +136,7 @@ open class SettingsSpaEnvironment(context: Context) : SpaEnvironment(context) {
         NetworkCellularGroupProvider(),
         WifiPrivacyPageProvider,
         PrintSettingsPageProvider,
+        CarrierSettingsOverridesProvider,
     )
 
     override val logger = if (FeatureFlagUtils.isEnabled(

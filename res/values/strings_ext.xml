@@ -268,4 +268,35 @@ This method can be particularly useful when GNSS is unavailable or unreliable, s
     <string name="geocoder_enabled_nominatim_server">Nominatim server</string>
     <string name="geocoder_disabled">Off</string>
 
+    <string name="carrier_settings_override_gos_title">Carrier settings overrides</string>
+    <string name="carrier_settings_override_intro_text">
+Override device carrier configuration for this SIM. This depends on carrier provisioning availability and doesn\'t bypass network restrictions, as this configuration is local to your device.
+
+Overrides will persist across reboots.
+    </string>
+    <string name="carrier_settings_override_intro_text_expand">Expand</string>
+    <string name="carrier_settings_override_intro_text_collapse">Collapse</string>
+    <string name="carrier_settings_override_error_title">Error</string>
+    <string name="carrier_settings_override_no_override_selected_message">All settings are using defaults. Need at least one override to enable.</string>
+    <string name="carrier_settings_override_main_switch_title">Enable overrides</string>
+    <string name="carrier_settings_override_apply_button">Apply carrier config override</string>
+    <string name="carrier_settings_override_clear_button">Clear all carrier config overrides</string>
+    <string name="carrier_settings_override_clear_message">All overrides must be cleared to set new overrides</string>
+    <string name="carrier_settings_default_bool_true">Enabled</string>
+    <string name="carrier_settings_default_bool_false">Disabled</string>
+    <string name="carrier_settings_default_unknown">Unknown</string>
+    <string name="carrier_settings_override_bool_true">Force enabled</string>
+    <string name="carrier_settings_override_bool_false">Force disabled</string>
+    <string name="carrier_settings_override_default__s">Default (%1$s)</string>
+    <string name="carrier_settings_override_volte_availability">VoLTE</string>
+    <string name="carrier_settings_override_vonr_enable">VoNR</string>
+    <string name="carrier_settings_override_5g_title">5G capabilities</string>
+    <string name="carrier_settings_override_5g_enabled_all_modes">Force NSA and SA</string>
+    <string name="carrier_settings_override_5g_default_all_modes">NSA and SA</string>
+    <string name="carrier_settings_override_5g_enabled_nsa">Force NSA</string>
+    <string name="carrier_settings_override_5g_default_nsa">NSA</string>
+    <string name="carrier_settings_override_5g_enabled_sa">Force NSA</string>
+    <string name="carrier_settings_override_5g_default_sa">SA</string>
+    <string name="carrier_settings_override_5g_disabled">Force disabled</string>
+    <string name="carrier_settings_default_5g_disabled">Disabled</string>
 </resources>
