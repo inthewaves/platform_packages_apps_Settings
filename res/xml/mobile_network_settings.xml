@@ -184,6 +184,13 @@
             settings:controller="com.android.settings.network.telephony.CarrierSettingsVersionPreferenceController"
             settings:enableCopying="true"/>
 
+        <!-- Settings search is handled by CarrierSettingsOverridesSearchItem. -->
+        <Preference
+            android:key="carrier_settings_override_gos"
+            android:title="@string/carrier_settings_override_gos_title"
+            settings:searchable="false"
+            settings:controller="com.android.settings.network.telephony.CarrierSettingsOverridesPreferenceController"/>
+
         <!-- IMEI -->
         <Preference
             android:key="network_mode_imei_info"

@@ -21,6 +21,7 @@ import android.provider.Settings
 import android.telephony.SubscriptionInfo
 import com.android.settings.R
 import com.android.settings.datausage.BillingCyclePreferenceController.Companion.BillingCycleSearchItem
+import com.android.settings.network.telephony.CarrierSettingsOverridesPreferenceController.Companion.CarrierSettingsOverridesSearchItem
 import com.android.settings.network.telephony.CarrierSettingsVersionPreferenceController.Companion.CarrierSettingsVersionSearchItem
 import com.android.settings.network.telephony.DataUsagePreferenceController.Companion.DataUsageSearchItem
 import com.android.settings.network.telephony.MmsMessagePreferenceController.Companion.MmsMessageSearchItem
@@ -35,7 +36,6 @@ import com.android.settings.spa.search.SpaSearchRepository.Companion.createSearc
 import com.android.settings.spa.search.SpaSearchRepository.Companion.searchIndexProviderOf
 import com.android.settingslib.search.SearchIndexableData
 import com.android.settingslib.search.SearchIndexableRaw
-import com.android.settingslib.spaprivileged.settingsprovider.settingsGlobalBoolean
 
 class MobileNetworkSettingsSearchIndex(
     private val searchItemsFactory: (context: Context) -> List<MobileNetworkSettingsSearchItem> =
@@ -113,6 +113,7 @@ class MobileNetworkSettingsSearchIndex(
         fun createSearchItems(context: Context): List<MobileNetworkSettingsSearchItem> =
             listOf(
                 BillingCycleSearchItem(context),
+                CarrierSettingsOverridesSearchItem(context),
                 CarrierSettingsVersionSearchItem(context),
                 DataUsageSearchItem(context),
                 MmsMessageSearchItem(context),
