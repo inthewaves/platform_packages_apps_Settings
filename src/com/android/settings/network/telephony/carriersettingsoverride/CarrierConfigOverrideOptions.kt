@@ -8,7 +8,7 @@ import com.android.settings.network.telephony.CarrierConfigRepository.KeyType
  * This file contains all the possible carrier config override options that will appear in the UI
  * To add a new option:
  *
- * 1. Create a new object subclassing [ChangeableCarrierConfigFlag].
+ * 1. Create a new object subclassing [ChangeableCarrierConfigOption].
  *    keysWithImportance specifies the keys that will be changed by the option.
  *    allPossibleConfigStates should enumerate all possible expected states for those keys. The "use
  *    default" option is added automatically elsewhere. You can mark user-selectable states that
@@ -33,7 +33,7 @@ private val simpleUniformBoolStates: List<ConfigState> = listOf(
 )
 
 // Add new options here so that the UI can display it
-val allowedUserChangeableCarrierConfigFlags: List<ChangeableCarrierConfigFlag> by lazy {
+val allowedUserChangeableCarrierConfigOptions: List<ChangeableCarrierConfigOption> by lazy {
     listOf(
 
         VoLTEAvailable,
@@ -53,7 +53,7 @@ val allowedUserChangeableCarrierConfigFlags: List<ChangeableCarrierConfigFlag> b
     }
 }
 
-data object VoLTEAvailable : ChangeableCarrierConfigFlag(
+data object VoLTEAvailable : ChangeableCarrierConfigOption(
     // The keys that will be edited in this option
     keysWithType = listOf(
         CarrierConfigManager.KEY_CARRIER_VOLTE_AVAILABLE_BOOL to KeyType.BOOLEAN,
@@ -106,7 +106,7 @@ data object VoLTEAvailable : ChangeableCarrierConfigFlag(
     override val titleStringRes = R.string.carrier_settings_override_volte_availability
 }
 
-data object VoNREnabled : ChangeableCarrierConfigFlag(
+data object VoNREnabled : ChangeableCarrierConfigOption(
     keysWithType = listOf(
         CarrierConfigManager.KEY_VONR_ENABLED_BOOL to KeyType.BOOLEAN,
         CarrierConfigManager.KEY_VONR_SETTING_VISIBILITY_BOOL to KeyType.BOOLEAN,
@@ -138,7 +138,7 @@ data object VoNREnabled : ChangeableCarrierConfigFlag(
     override val titleStringRes = R.string.carrier_settings_override_vonr_enable
 }
 
-data object Enable5G : ChangeableCarrierConfigFlag(
+data object Enable5G : ChangeableCarrierConfigOption(
     keysWithType = listOf(
         CarrierConfigManager.KEY_CARRIER_NR_AVAILABILITIES_INT_ARRAY to KeyType.INT_ARRAY,
     ),

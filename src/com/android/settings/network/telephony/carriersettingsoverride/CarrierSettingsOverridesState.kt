@@ -23,35 +23,58 @@ private const val TAG = "CarrierSetOverrideState"
  * own flag values.
  */
 @Immutable
-sealed interface ConfigState {
-    data object Inactive : ConfigState {
+sealed class ConfigState {
+    /**
+     * Indicates the state where the override is not active.
+     */
+    data object Inactive : ConfigState() {
         override val isUserSelectable: Boolean get() = true
         override fun get(index: Int): CarrierConfigTypedValue? = null
         override fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {}
+        override fun testMatching(
+            key: String,
+            keyIndex: Int,
+            config: PersistableBundle,
+            overrideConfig: PersistableBundle
+        ): Boolean {
+            return !overrideConfig.containsKey(key)
+        }
     }
 
-    sealed interface ActiveState : ConfigState {
-        @get:StringRes val selectionStringRes: Int
-        @get:StringRes val existingValueStringRes: Int
+    /**
+     * Indicates a state where the override is active.
+     */
+    sealed class ActiveState : ConfigState() {
+        @get:StringRes abstract val selectionStringRes: Int
+        @get:StringRes abstract val existingValueStringRes: Int
     }
 
     /**
      * Whether this state can be selected by the user in the UI or just something we display if
      * the default values are set to this state.
      */
-    val isUserSelectable: Boolean
+    abstract val isUserSelectable: Boolean
 
     data class Simple(
         val valueForAllKeys: CarrierConfigTypedValue,
         @get:StringRes override val selectionStringRes: Int,
         @get:StringRes override val existingValueStringRes: Int,
         override val isUserSelectable: Boolean = true
-    ) : ActiveState {
+    ) : ActiveState() {
         override fun get(index: Int): CarrierConfigTypedValue = valueForAllKeys
         override fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {
             keys.forEach{ key ->
                 doInsertion(valueForAllKeys, bundle, key)
             }
+        }
+
+        override fun testMatching(
+            key: String,
+            keyIndex: Int,
+            config: PersistableBundle,
+            overrideConfig: PersistableBundle
+        ): Boolean {
+            return valueForAllKeys.matchesValue(key, config)
         }
     }
 
@@ -64,16 +87,53 @@ sealed interface ConfigState {
         @get:StringRes override val selectionStringRes: Int,
         @get:StringRes override val existingValueStringRes: Int,
         override val isUserSelectable: Boolean = true
-    ) : ActiveState {
+    ) : ActiveState() {
         override fun get(index: Int): CarrierConfigTypedValue = stateValues[index]
         override fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {
             keys.forEachIndexed { index, key -> doInsertion(stateValues[index], bundle, key) }
         }
+
+        override fun testMatching(
+            key: String,
+            keyIndex: Int,
+            config: PersistableBundle,
+            overrideConfig: PersistableBundle
+        ): Boolean {
+            val typedValue = stateValues[keyIndex]
+            return typedValue.matchesValue(key, config)
+        }
+
     }
 
-    operator fun get(index: Int): CarrierConfigTypedValue?
+    abstract operator fun get(index: Int): CarrierConfigTypedValue?
 
-    fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle)
+    abstract fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle)
+
+    protected abstract fun testMatching(
+        key: String,
+        keyIndex: Int,
+        config: PersistableBundle,
+        overrideConfig: PersistableBundle
+    ): Boolean
+
+    /**
+     * Determines whether the values in [config] and [overrideConfig] match with this particular
+     * config state.
+     */
+    fun isMatchingConfig(
+        keys: List<String>,
+        subsetKeyIndices: List<Int>,
+        config: PersistableBundle,
+        overrideConfig: PersistableBundle
+    ): Boolean {
+        subsetKeyIndices.forEach { index ->
+            val key = keys[index]
+            if (!testMatching(key, index, config, overrideConfig)) {
+                return false
+            }
+        }
+        return true
+    }
 
     fun doInsertion(
         stateVal: CarrierConfigTypedValue,
@@ -105,7 +165,7 @@ sealed interface ConfigState {
  * And we can consider all other options as disabled.
  */
 @Stable
-sealed class ChangeableCarrierConfigFlag(
+sealed class ChangeableCarrierConfigOption(
     keysWithType: List<Pair<String, KeyType>>,
     allPossibleConfigStates: List<ConfigState>,
 ) {
@@ -120,78 +180,36 @@ sealed class ChangeableCarrierConfigFlag(
     val keys: List<String> = keysWithType.map { it.first }
     val types: List<KeyType> = keysWithType.map { it.second }
 
-    // TODO: Simplify this by just checking all possible options and requiring that we give every
-    //  possible states
-    fun getClosestMatch(
+    fun findMatchingConfigStateIndex(
         currentConfig: PersistableBundle,
         activeOverrides: PersistableBundle
-    ): Pair<Int, ConfigState> {
-        Log.d(TAG, "getClosestMatch for ${this.javaClass.simpleName}")
+    ): Int? {
+        Log.d(TAG, "findMatchingConfigStateIndex for ${this.javaClass.simpleName}")
         require(possibleConfigStates.last() is ConfigState.Inactive)
         require(possibleConfigStates.isNotEmpty())
 
         // Note that the current config values already include the active overrides
         val indicesOfKeysInConfig: List<Int> = keys.asSequence()
-            .mapIndexed { index, key -> index to key }
-            .filter { (_, key) -> currentConfig.containsKey(key) }
-            .map { (index, _) -> index }
+            .withIndex()
+            .filter { currentConfig.containsKey(it.value) }
+            .map { it.index }
             .toList()
 
         Log.d(TAG, "indicesOfKeysInConfig: $indicesOfKeysInConfig")
         if (indicesOfKeysInConfig.isEmpty()) {
             // Match to the disabled option
-            return possibleConfigStates.indices.last to possibleConfigStates.last()
+            return possibleConfigStates.indices.last
         }
 
-        // Because the individual carrier config flag values can be different, we do a histogram
-        // counting for each possible option the number of values that match up.
-        //
-        // For example, for VoNR, KEY_VONR_ENABLED_BOOL and KEY_VONR_SETTING_VISIBILITY_BOOL should
-        // both be true to be enabled. However, it's possible for KEY_VONR_ENABLED_BOOL to be false
-        // and KEY_VONR_SETTING_VISIBILITY_BOOL to be true.
-        //
-        // TODO: This histogram approach would be redundant if you specify all the possible
-        //  options.
-        val possibleConfigMatchHistogram = IntArray(possibleConfigStates.size)
-        possibleConfigStates.forEachIndexed { configIndex, possibleState ->
-            Log.d(TAG, "populating histogram for possible config state index $configIndex")
-            when (possibleState) {
-                is ConfigState.Complex -> {
-                    indicesOfKeysInConfig.forEach { index ->
-                        val key = keys[index]
-                        val thisStateVal = possibleState.stateValues[index]
-                        if (thisStateVal.matchesValue(key, currentConfig)) {
-                            Log.d(TAG, "key $key matches $thisStateVal")
-                            possibleConfigMatchHistogram[configIndex]++
-                        }
-                    }
-                }
-                ConfigState.Inactive -> {
-                    indicesOfKeysInConfig.forEach { index ->
-                        val key = keys[index]
-                        if (!activeOverrides.containsKey(key)) {
-                            Log.d(TAG, "key $key is not in activeOverrides")
-                            possibleConfigMatchHistogram[configIndex]++
-                        }
-                    }
-                }
-                is ConfigState.Simple -> {
-                    indicesOfKeysInConfig.forEach { index ->
-                        val key = keys[index]
-                        if (possibleState.valueForAllKeys.matchesValue(key, currentConfig)) {
-                            Log.d(TAG, "key $key matches ${possibleState.valueForAllKeys}")
-                            possibleConfigMatchHistogram[configIndex]++
-                        }
-                    }
-                }
+        return possibleConfigStates.asSequence()
+            .withIndex()
+            .filter {
+                it.value.isMatchingConfig(
+                    keys, indicesOfKeysInConfig, currentConfig, activeOverrides
+                )
             }
-        }
-        Log.d(TAG, "stateValueMatchCounts: ${possibleConfigMatchHistogram.asList()}")
-
-        val indexOfMax: Int = possibleConfigMatchHistogram.indices.maxBy {
-            possibleConfigMatchHistogram[it]
-        }
-        return indexOfMax to possibleConfigStates[indexOfMax]
+            .map { it.index }
+            .firstOrNull()
     }
 }
 
@@ -245,7 +263,7 @@ data class CarrierConfigState(
      * The specific option. This stores all possible states for the option, along with some string
      * resources to display in the UI, etc.
      */
-    val key: ChangeableCarrierConfigFlag,
+    val key: ChangeableCarrierConfigOption,
     /**
      * An index to the state prior to entering the carrier config overrides screen, i.e. the
      * existing state
@@ -274,7 +292,7 @@ data class CarrierConfigState(
         fun createState(
             subId: Int,
             repo: CarrierConfigRepository,
-            flag: ChangeableCarrierConfigFlag,
+            flag: ChangeableCarrierConfigOption,
             activeOverride: PersistableBundle
         ): CarrierConfigState {
             val currentAsBundle: PersistableBundle = repo.transformConfig(subId) {
@@ -293,7 +311,7 @@ data class CarrierConfigState(
 
             Log.d(TAG, "currentAsBundle: $currentAsBundle")
 
-            val (indexOfClosestMatch, _) = flag.getClosestMatch(currentAsBundle, activeOverride)
+            val indexOfClosestMatch = flag.findMatchingConfigStateIndex(currentAsBundle, activeOverride)
 
             val isOverridden = !activeOverride.isEmpty &&
                     flag.keys.any { key -> activeOverride.containsKey(key) }

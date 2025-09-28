@@ -277,11 +277,11 @@ Overrides will persist across reboots.
     <string name="carrier_settings_override_intro_text_expand">Expand</string>
     <string name="carrier_settings_override_intro_text_collapse">Collapse</string>
     <string name="carrier_settings_override_error_title">Error</string>
-    <string name="carrier_settings_override_no_override_selected_message">All settings are using defaults. Need at least one override to enable.</string>
+    <string name="carrier_settings_override_no_override_selected_message">All settings are at their defaults. Select an override to enable.</string>
     <string name="carrier_settings_override_main_switch_title">Enable overrides</string>
+    <string name="carrier_settings_override_cant_edit_message">Disable overrides to make changes</string>
     <string name="carrier_settings_override_apply_button">Apply carrier config override</string>
     <string name="carrier_settings_override_clear_button">Clear all carrier config overrides</string>
-    <string name="carrier_settings_override_clear_message">All overrides must be cleared to set new overrides</string>
     <string name="carrier_settings_default_bool_true">Enabled</string>
     <string name="carrier_settings_default_bool_false">Disabled</string>
     <string name="carrier_settings_default_unknown">Unknown</string>

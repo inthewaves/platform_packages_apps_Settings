@@ -25,7 +25,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -122,7 +124,7 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
         Log.d(TAG, "activeOverrides: $activeOverrides")
 
         // Construct states
-        val configList = allowedUserChangeableCarrierConfigFlags.map { flagKey ->
+        val configList = allowedUserChangeableCarrierConfigOptions.map { flagKey ->
             val state = CarrierConfigState.createState(
                 subId.value,
                 carrierConfigRepo,
@@ -155,8 +157,22 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
     private val _isOverriding = MutableStateFlow(false)
     val isOverrideInProgress: StateFlow<Boolean> = _isOverriding
 
+    sealed class MessageType {
+        data class ErrorMessage(val msg: String) : MessageType()
+        data object TurnOffToEdit : MessageType()
+    }
+
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    val message: Flow<MessageType?> =
+        combine(_errorMessage, _isAnOverrideActive) { errorMsg, active ->
+            if (errorMsg != null) {
+                MessageType.ErrorMessage(errorMsg)
+            } else if (active) {
+                MessageType.TurnOffToEdit
+            } else {
+                null
+            }
+        }.distinctUntilChanged()
 
     private val gate = Mutex()
     fun submitOverrides(clearOverrides: Boolean): Unit = viewModelScope.launch {
@@ -199,11 +215,10 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
                     waiter.await()
                     Log.d(TAG, "proceeding after carrier config update")
                 }
-
-                _errorMessage.value = null
+                _errorMessage.update { null }
             } catch (e: RemoteException) {
                 Log.e(TAG, "error while overriding config", e)
-                _errorMessage.value = "RemoteException: ${e.message}"
+                _errorMessage.update { "RemoteException: ${e.message}" }
             } finally {
                 waiter.cancel()
             }

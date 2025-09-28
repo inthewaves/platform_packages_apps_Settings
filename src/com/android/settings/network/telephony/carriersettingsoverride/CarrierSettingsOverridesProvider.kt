@@ -11,24 +11,31 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -39,7 +46,8 @@ import androidx.navigation.navArgument
 import com.android.settings.R
 import com.android.settings.spa.network.CollectAirplaneModeAndFinishIfOn
 import com.android.settingslib.spa.framework.common.SettingsPageProvider
-import com.android.settingslib.spa.widget.dialog.rememberAlertDialogPresenter
+import com.android.settingslib.spa.framework.theme.SettingsDimension
+import com.android.settingslib.spa.widget.dialog.SettingsDialog
 import com.android.settingslib.spa.widget.preference.Preference
 import com.android.settingslib.spa.widget.preference.PreferenceModel
 import com.android.settingslib.spa.widget.preference.SwitchPreferenceModel
@@ -47,6 +55,8 @@ import com.android.settingslib.spa.widget.preference.TopIntroPreference
 import com.android.settingslib.spa.widget.preference.TopIntroPreferenceModel
 import com.android.settingslib.spa.widget.scaffold.RegularScaffold
 import com.android.settingslib.spa.widget.ui.Category
+import com.android.settingslib.spa.widget.ui.SettingsBody
+import com.android.settingslib.spa.widget.ui.SettingsDialogItem
 import com.android.settingslib.spa.widget.ui.SettingsIcon
 import com.android.settingslib.spaprivileged.model.enterprise.Restrictions
 import com.android.settingslib.spaprivileged.template.preference.RestrictedMainSwitchPreference
@@ -87,9 +97,6 @@ object CarrierSettingsOverridesProvider : SettingsPageProvider {
             RestrictedMainSwitchPreference(
                 model = object : SwitchPreferenceModel {
                     override val title = stringResource(R.string.carrier_settings_override_main_switch_title)
-                    override val summary = {
-                        context.getString(R.string.carrier_settings_override_clear_message)
-                    }
                     override val changeable = { !isOverrideInProgress }
                     override val checked = { isOverrideActive }
                     override val onCheckedChange: (Boolean) -> Unit = { _ ->
@@ -100,9 +107,9 @@ object CarrierSettingsOverridesProvider : SettingsPageProvider {
             )
 
             Category {
-                val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+                val message by viewModel.message.collectAsStateWithLifecycle(null)
                 AnimatedContent(
-                    targetState = errorMessage,
+                    targetState = message,
                     transitionSpec = {
                         // Make it fade / slide in from top and vice versa
                         (fadeIn(tween(200)) + expandVertically()) togetherWith
@@ -110,77 +117,109 @@ object CarrierSettingsOverridesProvider : SettingsPageProvider {
                     },
                     label = "errorPref"
                 ) { msg ->
-                    if (msg != null) {
-                        CompositionLocalProvider(
-                            LocalContentColor provides MaterialTheme.colorScheme.error
-                        ) {
+                    when (msg) {
+                        is CarrierSettingsOverridesViewModel.MessageType.ErrorMessage -> {
+                            CompositionLocalProvider(
+                                LocalContentColor provides MaterialTheme.colorScheme.error
+                            ) {
+                                Preference(
+                                    model = object : PreferenceModel {
+                                        override val title = stringResource(
+                                            R.string.carrier_settings_override_error_title
+                                        )
+                                        override val summary: () -> String = { msg.msg }
+                                        override val icon = @Composable {
+                                            SettingsIcon(imageVector = Icons.Outlined.Info)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        CarrierSettingsOverridesViewModel.MessageType.TurnOffToEdit -> {
                             Preference(
                                 model = object : PreferenceModel {
-                                    override val title =
-                                        stringResource(R.string.carrier_settings_override_error_title)
-                                    override val summary: () -> String = { msg }
+                                    override val title = stringResource(
+                                        R.string.carrier_settings_override_cant_edit_message
+                                    )
+                                    override val summary: () -> String = { "" }
                                     override val icon = @Composable {
                                         SettingsIcon(imageVector = Icons.Outlined.Info)
                                     }
                                 }
                             )
                         }
+                        null -> {}
                     }
                 }
 
                 viewModel.overrideStates.forEach { flagState: CarrierConfigState ->
-                    val selectedIndexForThisFlag by flagState.stateIndex
-                    val currentState: ConfigState? = remember(selectedIndexForThisFlag) {
-                        selectedIndexForThisFlag?.let { flagState.key.possibleConfigStates[it] }
-                    }
-
-                    var hideDialog by remember { mutableStateOf(false) }
-                    val alertDialog = rememberAlertDialogPresenter(
-                        title = stringResource(flagState.key.titleStringRes),
-                        text = {
-                            val allStates = flagState.key.possibleConfigStates
-                            allStates.forEachIndexed { index, possibleState ->
-                                if (!possibleState.isUserSelectable) return@forEachIndexed
-
-                                RadioButtonRow(
-                                    text = getSelectionText(context, flagState, possibleState),
-                                    selected = index == selectedIndexForThisFlag,
-                                    enabled = !isOverrideInProgress && !isOverrideActive,
-                                    onSelected = {
-                                        flagState.stateIndex.value = index
-                                        hideDialog = true
-                                    }
-                                )
-                            }
-                        },
+                    CarrierSettingOverrideOptionPreference(
+                        flagState,
+                        context,
+                        isOverrideInProgress,
+                        isOverrideActive
                     )
-                    LaunchedEffect(hideDialog) {
-                        if (hideDialog) {
-                            alertDialog.close()
-                            hideDialog = false
-                        }
-                    }
+                }
+            }
+        }
+    }
+    fun getRoute(subId: Int): String = "${name}/$subId"
+}
 
-                    RestrictedPreference(
-                        model = object : PreferenceModel {
-                            override val title = context.getString(flagState.key.titleStringRes)
-                            override val summary = {
-                                getSelectionText(context, flagState, currentState)
-                            }
-                            override val icon = null
-                            override val enabled = { !isOverrideInProgress && !isOverrideActive }
-                            override val onClick = {
-                                if (enabled()) alertDialog.open()
-                            }
-                        },
-                        restrictions = Restrictions(keys = listOf(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS)),
+@Composable
+private fun CarrierSettingOverrideOptionPreference(
+    flagState: CarrierConfigState,
+    context: Context,
+    isOverrideInProgress: Boolean,
+    isOverrideActive: Boolean
+) {
+    val selectedIndexForThisFlag by flagState.stateIndex
+    val currentState: ConfigState? = remember(selectedIndexForThisFlag) {
+        selectedIndexForThisFlag?.let { flagState.key.possibleConfigStates[it] }
+    }
+
+    var dialogOpened by rememberSaveable { mutableStateOf(false) }
+    if (dialogOpened) {
+        SettingsDialog(
+            title = stringResource(flagState.key.titleStringRes),
+            onDismissRequest = { dialogOpened = false },
+        ) {
+            Column(
+                modifier = Modifier.selectableGroup().verticalScroll(
+                    rememberScrollState()
+                )
+            ) {
+                val allStates = flagState.key.possibleConfigStates
+                allStates.forEachIndexed { index, possibleState ->
+                    if (!possibleState.isUserSelectable) return@forEachIndexed
+                    Radio(
+                        text = getSelectionText(context, flagState, possibleState),
+                        selected = index == selectedIndexForThisFlag,
+                        enabled = !isOverrideInProgress && !isOverrideActive,
+                        onSelected = {
+                            flagState.stateIndex.value = index
+                            dialogOpened = false
+                        }
                     )
                 }
             }
         }
     }
 
-    fun getRoute(subId: Int): String = "${name}/$subId"
+    RestrictedPreference(
+        model = object : PreferenceModel {
+            override val title = context.getString(flagState.key.titleStringRes)
+            override val summary = {
+                getSelectionText(context, flagState, currentState)
+            }
+            override val icon = null
+            override val enabled = { !isOverrideInProgress && !isOverrideActive }
+            override val onClick = {
+                if (enabled()) dialogOpened = true
+            }
+        },
+        restrictions = Restrictions(keys = listOf(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS)),
+    )
 }
 
 private fun getSelectionText(
@@ -219,30 +258,40 @@ private fun getSelectionText(
     }
 }
 
+/**
+ * Adapted from com.android.settingslib.spa.widget.preference.ListPreference
+ */
 @Composable
-fun RadioButtonRow(
+private fun Radio(
     text: String,
+    summary: String? = null,
     selected: Boolean,
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onSelected: () -> Unit,
 ) {
-    ListItem(
-        modifier = modifier.selectable(
-            selected = selected,
-            onClick = { if (enabled) onSelected() },
-            role = Role.RadioButton,
-            enabled = enabled,
-        ),
-        leadingContent = {
-            RadioButton(
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .selectable(
                 selected = selected,
-                // The ListItem handles the click events
-                onClick = null,
                 enabled = enabled,
+                onClick = { onSelected() },
+                role = Role.RadioButton,
             )
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = { Text(text) }
-    )
+            .padding(SettingsDimension.dialogItemPadding),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null, enabled = enabled)
+        Spacer(modifier = Modifier.width(SettingsDimension.itemPaddingEnd))
+        Column {
+            SettingsDialogItem(text = text, enabled = enabled)
+            if (summary?.isNotEmpty() == true) {
+                SettingsBody(
+                    body = summary,
+                    maxLines = 2
+                )
+            }
+        }
+    }
 }
