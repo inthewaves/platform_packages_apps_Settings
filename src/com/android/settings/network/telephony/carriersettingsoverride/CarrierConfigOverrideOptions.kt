@@ -2,7 +2,7 @@ package com.android.settings.network.telephony.carriersettingsoverride
 
 import android.telephony.CarrierConfigManager
 import com.android.settings.R
-import com.android.settings.network.telephony.carriersettingsoverride.ConfigState.StateType
+import com.android.settings.network.telephony.CarrierConfigRepository.KeyType
 
 /**
  * This file contains all the possible carrier config override options that will appear in the UI
@@ -20,13 +20,13 @@ import com.android.settings.network.telephony.carriersettingsoverride.ConfigStat
  */
 
 private val simpleUniformBoolStates: List<ConfigState> = listOf(
-    ConfigState(
-        StateType.Simple(CarrierConfigTypedValue.Bool(true)),
+    ConfigState.Simple(
+        CarrierConfigTypedValue.Bool(true),
         R.string.carrier_settings_override_bool_true,
         R.string.carrier_settings_default_bool_true,
     ),
-    ConfigState(
-        StateType.Simple(CarrierConfigTypedValue.Bool(false)),
+    ConfigState.Simple(
+        CarrierConfigTypedValue.Bool(false),
         R.string.carrier_settings_override_bool_false,
         R.string.carrier_settings_default_bool_false,
     ),
@@ -42,8 +42,8 @@ val allowedUserChangeableCarrierConfigFlags: List<ChangeableCarrierConfigFlag> b
 
     ).onEach { flag ->
         flag.possibleConfigStates.forEach { state ->
-            if (state.stateMapByKey is StateType.Complex) {
-                val left = state.stateMapByKey.stateValues.size
+            if (state is ConfigState.Complex) {
+                val left = state.stateValues.size
                 val right = flag.keys.size
                 require(left == right) {
                     "key size for ${flag.javaClass.simpleName} mismatch ($left != $right)"
@@ -55,15 +55,15 @@ val allowedUserChangeableCarrierConfigFlags: List<ChangeableCarrierConfigFlag> b
 
 data object VoLTEAvailable : ChangeableCarrierConfigFlag(
     // The keys that will be edited in this option
-    keysWithImportance = listOf(
-        CarrierConfigManager.KEY_CARRIER_VOLTE_AVAILABLE_BOOL to KeyImportance.IMPORTANT,
-        CarrierConfigManager.KEY_HIDE_ENHANCED_4G_LTE_BOOL to KeyImportance.IMPORTANT,
+    keysWithType = listOf(
+        CarrierConfigManager.KEY_CARRIER_VOLTE_AVAILABLE_BOOL to KeyType.BOOLEAN,
+        CarrierConfigManager.KEY_HIDE_ENHANCED_4G_LTE_BOOL to KeyType.BOOLEAN,
     ),
     // All possible values for the keys. Each of these can be an option that the user can select
     allPossibleConfigStates = listOf(
         // Enabled
-        ConfigState(
-            StateType.Complex(
+        ConfigState.Complex(
+            listOf(
                 CarrierConfigTypedValue.Bool(true), // KEY_CARRIER_VOLTE_AVAILABLE_BOOL
                 CarrierConfigTypedValue.Bool(false), // KEY_HIDE_ENHANCED_4G_LTE_BOOL
             ),
@@ -71,8 +71,8 @@ data object VoLTEAvailable : ChangeableCarrierConfigFlag(
             R.string.carrier_settings_default_bool_true,
         ),
         // Disabled
-        ConfigState(
-            StateType.Complex(
+        ConfigState.Complex(
+            listOf(
                 CarrierConfigTypedValue.Bool(false),
                 CarrierConfigTypedValue.Bool(true),
             ),
@@ -82,8 +82,8 @@ data object VoLTEAvailable : ChangeableCarrierConfigFlag(
 
         // Other states not exposed for user selection just so that we have a description for them
         // Disabled
-        ConfigState(
-            StateType.Complex(
+        ConfigState.Complex(
+            listOf(
                 CarrierConfigTypedValue.Bool(false),
                 CarrierConfigTypedValue.Bool(false),
             ),
@@ -92,8 +92,8 @@ data object VoLTEAvailable : ChangeableCarrierConfigFlag(
             isUserSelectable = false,
         ),
         // Disabled
-        ConfigState(
-            StateType.Complex(
+        ConfigState.Complex(
+            listOf(
                 CarrierConfigTypedValue.Bool(true),
                 CarrierConfigTypedValue.Bool(true),
             ),
@@ -107,16 +107,16 @@ data object VoLTEAvailable : ChangeableCarrierConfigFlag(
 }
 
 data object VoNREnabled : ChangeableCarrierConfigFlag(
-    keysWithImportance = listOf(
-        CarrierConfigManager.KEY_VONR_ENABLED_BOOL to KeyImportance.IMPORTANT,
-        CarrierConfigManager.KEY_VONR_SETTING_VISIBILITY_BOOL to KeyImportance.IMPORTANT
+    keysWithType = listOf(
+        CarrierConfigManager.KEY_VONR_ENABLED_BOOL to KeyType.BOOLEAN,
+        CarrierConfigManager.KEY_VONR_SETTING_VISIBILITY_BOOL to KeyType.BOOLEAN,
     ),
     // Use uniform booleans (true true, false false), then cover other states not exposed for user
     // selection just so that we have a description for them
     allPossibleConfigStates = simpleUniformBoolStates + listOf(
         // Not exposed for user
-        ConfigState(
-            StateType.Complex(
+        ConfigState.Complex(
+            listOf(
                 CarrierConfigTypedValue.Bool(true),
                 CarrierConfigTypedValue.Bool(false),
             ),
@@ -124,8 +124,8 @@ data object VoNREnabled : ChangeableCarrierConfigFlag(
             R.string.carrier_settings_default_bool_false,
             isUserSelectable = false,
         ),
-        ConfigState(
-            StateType.Complex(
+        ConfigState.Complex(
+            listOf(
                 CarrierConfigTypedValue.Bool(false),
                 CarrierConfigTypedValue.Bool(true),
             ),
@@ -139,48 +139,42 @@ data object VoNREnabled : ChangeableCarrierConfigFlag(
 }
 
 data object Enable5G : ChangeableCarrierConfigFlag(
-    keysWithImportance = listOf(
-        CarrierConfigManager.KEY_CARRIER_NR_AVAILABILITIES_INT_ARRAY to KeyImportance.IMPORTANT,
+    keysWithType = listOf(
+        CarrierConfigManager.KEY_CARRIER_NR_AVAILABILITIES_INT_ARRAY to KeyType.INT_ARRAY,
     ),
     allPossibleConfigStates = listOf(
         // Enabled (i.e. all the 5G NR capabilities)
-        ConfigState(
-            StateType.Simple(
-                CarrierConfigTypedValue.IntegerArray(
-                    listOf(
-                        CarrierConfigManager.CARRIER_NR_AVAILABILITY_NSA,
-                        CarrierConfigManager.CARRIER_NR_AVAILABILITY_SA,
-                    )
+        ConfigState.Simple(
+            CarrierConfigTypedValue.IntegerArray(
+                listOf(
+                    CarrierConfigManager.CARRIER_NR_AVAILABILITY_NSA,
+                    CarrierConfigManager.CARRIER_NR_AVAILABILITY_SA,
                 )
             ),
             R.string.carrier_settings_override_5g_enabled_all_modes,
             R.string.carrier_settings_override_5g_default_all_modes,
         ),
         // Only NSA
-        ConfigState(
-            StateType.Simple(
-                CarrierConfigTypedValue.IntegerArray(
-                    listOf(CarrierConfigManager.CARRIER_NR_AVAILABILITY_NSA)
-                )
+        ConfigState.Simple(
+            CarrierConfigTypedValue.IntegerArray(
+                listOf(CarrierConfigManager.CARRIER_NR_AVAILABILITY_NSA)
             ),
             R.string.carrier_settings_override_5g_enabled_nsa,
             R.string.carrier_settings_override_5g_default_nsa,
             isUserSelectable = false,
         ),
         // Only SA
-        ConfigState(
-            StateType.Simple(
-                CarrierConfigTypedValue.IntegerArray(
-                    listOf(CarrierConfigManager.CARRIER_NR_AVAILABILITY_SA)
-                )
+        ConfigState.Simple(
+            CarrierConfigTypedValue.IntegerArray(
+                listOf(CarrierConfigManager.CARRIER_NR_AVAILABILITY_SA)
             ),
             R.string.carrier_settings_override_5g_enabled_sa,
             R.string.carrier_settings_override_5g_default_sa,
             isUserSelectable = false,
         ),
         // Disabled (i.e. no 5G NR capabilities)
-        ConfigState(
-            StateType.Simple(CarrierConfigTypedValue.IntegerArray(emptyList())),
+        ConfigState.Simple(
+            CarrierConfigTypedValue.IntegerArray(emptyList()),
             R.string.carrier_settings_override_5g_disabled,
             R.string.carrier_settings_default_5g_disabled,
         ),

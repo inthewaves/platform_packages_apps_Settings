@@ -2,7 +2,6 @@ package com.android.settings.network.telephony.carriersettingsoverride
 
 import android.annotation.StringRes
 import android.os.PersistableBundle
-import android.util.ArrayMap
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
@@ -10,8 +9,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import com.android.settings.network.telephony.CarrierConfigRepository
 import com.android.settings.network.telephony.CarrierConfigRepository.KeyType
-import com.android.settings.network.telephony.carriersettingsoverride.ConfigState.Companion.disabledState
-import com.android.settings.network.telephony.carriersettingsoverride.ConfigState.StateType
 
 private const val TAG = "CarrierSetOverrideState"
 
@@ -24,60 +21,61 @@ private const val TAG = "CarrierSetOverrideState"
  * e.g. for boolean flags, you would have [ConfigState] instance for "Enabled" which specifies
  * the carrier config flag values for "Enabled", and another [ConfigState] for "Disabled" with its
  * own flag values.
- *
- * TODO: For clarity, maybe change ConfigState to be a sealed class and have a user selectable,
- *  non user-selectable, and Disabled variants
  */
 @Immutable
-data class ConfigState(
-    /**
-     * Specifies the carrier config flag values for this particular state.
-     */
-    val stateMapByKey: StateType?,
-    /** The string to show when user is selecting this in the UI */
-    @StringRes val selectionStringRes: Int,
+sealed interface ConfigState {
+    data object Inactive : ConfigState {
+        override val isUserSelectable: Boolean get() = true
+        override fun get(index: Int): CarrierConfigTypedValue? = null
+        override fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {}
+    }
 
-    @StringRes val existingValueStringRes: Int,
+    sealed interface ActiveState : ConfigState {
+        @get:StringRes val selectionStringRes: Int
+        @get:StringRes val existingValueStringRes: Int
+    }
+
     /**
      * Whether this state can be selected by the user in the UI or just something we display if
      * the default values are set to this state.
      */
-    val isUserSelectable: Boolean = true,
-) {
-    @Immutable
-    sealed interface StateType {
-        data class Simple(val valueForAllKeys: CarrierConfigTypedValue) : StateType
-        /**
-         *  For when a set of flags have different values per setting. size of [stateValues] is
-         *  expected to be the same as the size of the keys list.
-         */
-        data class Complex(val stateValues: List<CarrierConfigTypedValue>) : StateType {
-            constructor(vararg stateVals: CarrierConfigTypedValue) : this(stateVals.asList())
-        }
-    }
+    val isUserSelectable: Boolean
 
-    val isDisabledState: Boolean
-        get() = stateMapByKey == null || selectionStringRes == 0 || existingValueStringRes == 0
-
-    operator fun get(index: Int): CarrierConfigTypedValue? {
-        return when (stateMapByKey) {
-            is StateType.Complex -> stateMapByKey.stateValues[index]
-            is StateType.Simple -> stateMapByKey.valueForAllKeys
-            null -> null
-        }
-    }
-
-    fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {
-        if (stateMapByKey == null) return
-        keys.forEachIndexed { index, key ->
-            when (stateMapByKey) {
-                is StateType.Complex -> doInsertion(stateMapByKey.stateValues[index], bundle, key)
-                is StateType.Simple -> doInsertion(stateMapByKey.valueForAllKeys, bundle, key)
+    data class Simple(
+        val valueForAllKeys: CarrierConfigTypedValue,
+        @get:StringRes override val selectionStringRes: Int,
+        @get:StringRes override val existingValueStringRes: Int,
+        override val isUserSelectable: Boolean = true
+    ) : ActiveState {
+        override fun get(index: Int): CarrierConfigTypedValue = valueForAllKeys
+        override fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {
+            keys.forEach{ key ->
+                doInsertion(valueForAllKeys, bundle, key)
             }
         }
     }
 
-    private fun doInsertion(
+    /**
+     *  For when a set of flags have different values per setting. size of [stateValues] is
+     *  expected to be the same as the size of the keys list.
+     */
+    data class Complex(
+        val stateValues: List<CarrierConfigTypedValue>,
+        @get:StringRes override val selectionStringRes: Int,
+        @get:StringRes override val existingValueStringRes: Int,
+        override val isUserSelectable: Boolean = true
+    ) : ActiveState {
+        override fun get(index: Int): CarrierConfigTypedValue = stateValues[index]
+        override fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle) {
+            keys.forEachIndexed { index, key -> doInsertion(stateValues[index], bundle, key) }
+        }
+    }
+
+    operator fun get(index: Int): CarrierConfigTypedValue?
+
+    fun insertIntoBundle(keys: List<String>, bundle: PersistableBundle)
+
+    fun doInsertion(
         stateVal: CarrierConfigTypedValue,
         bundle: PersistableBundle,
         key: String,
@@ -93,27 +91,12 @@ data class ConfigState(
                 stateVal.currentValue?.let { bundle.putString(key, it) }
         }
     }
-
-    companion object {
-        fun disabledState() = ConfigState(null, 0, 0)
-    }
-}
-
-/**
- * Specifies a priority for keys. This will help determine keys should be used to find out the
- * closest option.
- *
- * TODO: Phase this out in favor of specifying all possible options
- */
-enum class KeyImportance {
-    NOT_IMPORTANT,
-    IMPORTANT
 }
 
 /**
  * Specifies a user-facing option for a set of carrier config flags
  *
- * @param keysWithImportance specifies the keys for the config flags that will be edited by this u
+ * @param keysWithType specifies the keys for the config flags that will be edited by this u
  * @param allPossibleConfigStates specifies all the possible values for this option.
  * For example, for 5G, you would need to do FLAG_ENABLED and FLAG_UI_ENABLED. So the possible
  * options would be:
@@ -123,7 +106,7 @@ enum class KeyImportance {
  */
 @Stable
 sealed class ChangeableCarrierConfigFlag(
-    keysWithImportance: List<Pair<String, KeyImportance>>,
+    keysWithType: List<Pair<String, KeyType>>,
     allPossibleConfigStates: List<ConfigState>,
 ) {
     @get:StringRes
@@ -132,45 +115,10 @@ sealed class ChangeableCarrierConfigFlag(
     /**
      * List of all possible config states including disabled.
      */
-    val possibleConfigStates: List<ConfigState> = allPossibleConfigStates + listOf(disabledState())
+    val possibleConfigStates: List<ConfigState> = allPossibleConfigStates + listOf(ConfigState.Inactive)
 
-    val keys: List<String> = keysWithImportance.map { it.first }
-    val importance: List<KeyImportance> = keysWithImportance.map { it.second }
-
-    val getAllKeysWithKeyType: Map<String, KeyType> by lazy {
-        val map = ArrayMap<String, KeyType>(keys.size)
-        possibleConfigStates.forEach { state ->
-            when (state.stateMapByKey) {
-                is StateType.Complex -> {
-                    require(state.stateMapByKey.stateValues.size == keys.size)
-                    state.stateMapByKey.stateValues.forEachIndexed { index, stateValue ->
-                        when (stateValue) {
-                            is CarrierConfigTypedValue.Bool -> map[keys[index]] = KeyType.BOOLEAN
-                            is CarrierConfigTypedValue.Integer -> map[keys[index]] = KeyType.INT
-                            is CarrierConfigTypedValue.IntegerArray -> map[keys[index]] =
-                                KeyType.INT_ARRAY
-                            is CarrierConfigTypedValue.Str -> map[keys[index]] = KeyType.STRING
-                        }
-                    }
-                }
-                is StateType.Simple -> {
-                    keys.forEach { key ->
-                        when (state.stateMapByKey.valueForAllKeys) {
-                            is CarrierConfigTypedValue.Bool -> map[key] = KeyType.BOOLEAN
-                            is CarrierConfigTypedValue.Integer -> map[key] = KeyType.INT
-                            is CarrierConfigTypedValue.IntegerArray -> map[key] = KeyType.INT_ARRAY
-                            is CarrierConfigTypedValue.Str -> map[key] = KeyType.STRING
-                        }
-                    }
-                }
-                null -> return@forEach
-            }
-            if (map.size == keys.size) {
-                return@lazy map
-            }
-        }
-        map
-    }
+    val keys: List<String> = keysWithType.map { it.first }
+    val types: List<KeyType> = keysWithType.map { it.second }
 
     // TODO: Simplify this by just checking all possible options and requiring that we give every
     //  possible states
@@ -179,18 +127,16 @@ sealed class ChangeableCarrierConfigFlag(
         activeOverrides: PersistableBundle
     ): Pair<Int, ConfigState> {
         Log.d(TAG, "getClosestMatch for ${this.javaClass.simpleName}")
-        require(possibleConfigStates.last().isDisabledState)
+        require(possibleConfigStates.last() is ConfigState.Inactive)
         require(possibleConfigStates.isNotEmpty())
-
-        val maxImportance = importance.maxOrNull()
 
         // Note that the current config values already include the active overrides
         val indicesOfKeysInConfig: List<Int> = keys.asSequence()
             .mapIndexed { index, key -> index to key }
-            .filter { (index, _) -> importance[index] == maxImportance }
             .filter { (_, key) -> currentConfig.containsKey(key) }
             .map { (index, _) -> index }
             .toList()
+
         Log.d(TAG, "indicesOfKeysInConfig: $indicesOfKeysInConfig")
         if (indicesOfKeysInConfig.isEmpty()) {
             // Match to the disabled option
@@ -207,34 +153,33 @@ sealed class ChangeableCarrierConfigFlag(
         // TODO: This histogram approach would be redundant if you specify all the possible
         //  options.
         val possibleConfigMatchHistogram = IntArray(possibleConfigStates.size)
-        possibleConfigStates.forEachIndexed { configIndex, possibleConfigSelection ->
+        possibleConfigStates.forEachIndexed { configIndex, possibleState ->
             Log.d(TAG, "populating histogram for possible config state index $configIndex")
-            when (val stateMap = possibleConfigSelection.stateMapByKey) {
-                is StateType.Complex -> {
+            when (possibleState) {
+                is ConfigState.Complex -> {
                     indicesOfKeysInConfig.forEach { index ->
                         val key = keys[index]
-                        val thisStateVal = stateMap.stateValues[index]
+                        val thisStateVal = possibleState.stateValues[index]
                         if (thisStateVal.matchesValue(key, currentConfig)) {
                             Log.d(TAG, "key $key matches $thisStateVal")
                             possibleConfigMatchHistogram[configIndex]++
                         }
                     }
                 }
-                is StateType.Simple -> {
-                    indicesOfKeysInConfig.forEach { index ->
-                        val key = keys[index]
-                        if (stateMap.valueForAllKeys.matchesValue(key, currentConfig)) {
-                            Log.d(TAG, "key $key matches ${stateMap.valueForAllKeys}")
-                            possibleConfigMatchHistogram[configIndex]++
-                        }
-                    }
-                }
-                // The disabled option
-                null -> {
+                ConfigState.Inactive -> {
                     indicesOfKeysInConfig.forEach { index ->
                         val key = keys[index]
                         if (!activeOverrides.containsKey(key)) {
                             Log.d(TAG, "key $key is not in activeOverrides")
+                            possibleConfigMatchHistogram[configIndex]++
+                        }
+                    }
+                }
+                is ConfigState.Simple -> {
+                    indicesOfKeysInConfig.forEach { index ->
+                        val key = keys[index]
+                        if (possibleState.valueForAllKeys.matchesValue(key, currentConfig)) {
+                            Log.d(TAG, "key $key matches ${possibleState.valueForAllKeys}")
                             possibleConfigMatchHistogram[configIndex]++
                         }
                     }
@@ -334,8 +279,8 @@ data class CarrierConfigState(
         ): CarrierConfigState {
             val currentAsBundle: PersistableBundle = repo.transformConfig(subId) {
                 val bundle = PersistableBundle()
-                val allKeysWithType: Map<String, KeyType> = flag.getAllKeysWithKeyType
-                for ((key, type) in allKeysWithType) {
+                flag.keys.forEachIndexed { index, key ->
+                    val type = flag.types[index]
                     when (type) {
                         KeyType.BOOLEAN -> bundle.putBoolean(key, getBoolean(key))
                         KeyType.INT -> bundle.putInt(key, getInt(key))

@@ -189,29 +189,32 @@ private fun getSelectionText(
     stateToDisplay: ConfigState?,
 ): String {
     // If state is disabled, show the Default (defaultValue) string
+    return when (stateToDisplay) {
+        is ConfigState.ActiveState -> {
+            context.getString(stateToDisplay.selectionStringRes)
+        }
+        ConfigState.Inactive, null -> {
+            if (flagState.isOverriddenBefore.value) {
+                // Show as an overridden summary if the current state is from overridden config
+                // e.g. it will show "Force enabled"
+                flagState
+                    .getConfigStateFromIndex(useIndexOfCurrentConfigValue = true)
+                    ?.let { it as? ConfigState.ActiveState }
+                    ?.selectionStringRes
+                    ?.let(context::getString)
+                    ?: context.getString(R.string.carrier_settings_default_unknown)
+            } else {
+                // Show as a default-value summary if the current state is not from overridden config
+                // e.g. it will show "Default (Enabled)"
+                val existingValString = flagState
+                    .getConfigStateFromIndex(useIndexOfCurrentConfigValue = true)
+                    ?.let { it as? ConfigState.ActiveState }
+                    ?.existingValueStringRes
+                    ?.let(context::getString)
+                    ?: context.getString(R.string.carrier_settings_default_unknown)
 
-    return if (stateToDisplay != null && !stateToDisplay.isDisabledState) {
-        context.getString(stateToDisplay.selectionStringRes)
-    } else {
-        if (flagState.isOverriddenBefore.value) {
-            // Show as an overridden summary if the current state is from overridden config
-            // e.g. it will show "Force enabled"
-            flagState.getConfigStateFromIndex(
-                useIndexOfCurrentConfigValue = true
-            )?.selectionStringRes
-                ?.takeIf { it != 0 }
-                ?.let(context::getString)
-                ?: context.getString(R.string.carrier_settings_default_unknown)
-        } else {
-            // Show as a default-value summary if the current state is not from overridden config
-            // e.g. it will show "Default (Enabled)"
-            val existingValString = flagState.getConfigStateFromIndex(
-                useIndexOfCurrentConfigValue = true
-            )?.existingValueStringRes
-                ?.takeIf { it != 0 }
-                ?.let(context::getString)
-                ?: context.getString(R.string.carrier_settings_default_unknown)
-            context.getString(R.string.carrier_settings_override_default__s, existingValString)
+                context.getString(R.string.carrier_settings_override_default__s, existingValString)
+            }
         }
     }
 }
