@@ -94,6 +94,7 @@ android_library {
         "WindowManager-Shell-shared-desktopMode",
 
         // Settings dependencies
+        "CarrierConfig2-aidl",
         "google_battery",
         "FingerprintManagerInteractor",
         "MediaDrmSettingsFlagsLib",

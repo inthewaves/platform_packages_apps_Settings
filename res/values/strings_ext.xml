@@ -283,6 +283,10 @@ May cause unreliable service. Use at your own risk.
     <string name="carrier_settings_override_no_override_selected_message">No overrides are active. All settings are at their defaults.</string>
     <string name="carrier_settings_override_main_switch_title">Enable overrides</string>
     <string name="carrier_settings_override_active_title">Overrides active</string>
+    <string name="carrier_settings_override_unrecognized_category_title">Unknown overrides</string>
+    <string name="carrier_settings_override_unrecognized_warning_title">Warning</string>
+    <string name="carrier_settings_override_unrecognized_warning_summary">These carrier config overrides are not set from this screen.</string>
+    <string name="carrier_settings_override_error_unable_to_connect_to_config">Unable to connect with CarrierConfig2</string>
     <string name="carrier_settings_override_active_summary">Disable overrides to make changes</string>
     <string name="carrier_settings_override_apply_button">Apply carrier config override</string>
     <string name="carrier_settings_override_clear_button">Clear all carrier config overrides</string>

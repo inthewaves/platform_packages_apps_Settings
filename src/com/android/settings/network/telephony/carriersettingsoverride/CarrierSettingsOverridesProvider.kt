@@ -4,6 +4,7 @@ import android.app.settings.SettingsEnums
 import android.content.Context
 import android.os.Bundle
 import android.os.UserManager
+import android.util.ArrayMap
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -23,6 +24,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -170,10 +172,61 @@ object CarrierSettingsOverridesProvider : SettingsPageProvider {
                 }
             }
 
+            val unrecognizedOverrides by viewModel.unrecognizedOverrides
+                .collectAsStateWithLifecycle()
+            if (!unrecognizedOverrides.isNullOrEmpty()) {
+                Category(stringResource(R.string.carrier_settings_override_unrecognized_category_title)) {
+                    CompositionLocalProvider(
+                        LocalContentColor provides MaterialTheme.colorScheme.error
+                    ) {
+                        Preference(
+                            model = object : PreferenceModel {
+                                override val title = stringResource(
+                                    R.string.carrier_settings_override_unrecognized_warning_title
+                                )
+                                override val summary: () -> String = {
+                                    context.getString(
+                                        R.string.carrier_settings_override_unrecognized_warning_summary
+                                    )
+                                }
+                                override val icon = @Composable {
+                                    SettingsIcon(imageVector = Icons.Outlined.Warning)
+                                }
+                            }
+                        )
+                    }
+
+                    unrecognizedOverrides?.forEachInline { key, value ->
+                        Preference(
+                            model = object : PreferenceModel {
+                                override val title = key
+                                override val summary: () -> String = {
+                                    if (value is Array<*>) {
+                                        value.asList().toString()
+                                    } else {
+                                        value.toString()
+                                    }
+                                }
+                                override val icon = @Composable {
+                                    SettingsIcon(imageVector = Icons.Outlined.Warning)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
             Footer(stringResource(R.string.carrier_settings_override_footer))
         }
     }
+
     fun getRoute(subId: Int): String = "${name}/$subId"
+}
+
+private inline fun <K, V> ArrayMap<K, V>.forEachInline(action: (K, V) -> Unit) {
+    for (index in 0 until size) {
+        action(keyAt(index), valueAt(index))
+    }
 }
 
 @Composable
@@ -237,27 +290,24 @@ private fun getSelectionText(
     flagState: CarrierConfigState,
     stateToDisplay: ConfigState?,
 ): String {
-    // If state is disabled, show the Default (defaultValue) string
     return when (stateToDisplay) {
         is ConfigState.ActiveState -> {
             context.getString(stateToDisplay.selectionStringRes)
         }
         ConfigState.Inactive, null -> {
+            val active = flagState.getConfigStateFromIndex(useIndexOfCurrentConfigValue = true)
+                as? ConfigState.ActiveState
             if (flagState.isOverriddenBefore.value) {
                 // Show as an overridden summary if the current state is from overridden config
                 // e.g. it will show "Force enabled"
-                flagState
-                    .getConfigStateFromIndex(useIndexOfCurrentConfigValue = true)
-                    ?.let { it as? ConfigState.ActiveState }
+                active
                     ?.selectionStringRes
                     ?.let(context::getString)
                     ?: context.getString(R.string.carrier_settings_default_unknown)
             } else {
                 // Show as a default-value summary if the current state is not from overridden config
                 // e.g. it will show "Default (Enabled)"
-                val existingValString = flagState
-                    .getConfigStateFromIndex(useIndexOfCurrentConfigValue = true)
-                    ?.let { it as? ConfigState.ActiveState }
+                val existingValString = active
                     ?.existingValueStringRes
                     ?.let(context::getString)
                     ?: context.getString(R.string.carrier_settings_default_unknown)

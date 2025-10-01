@@ -1,11 +1,17 @@
 package com.android.settings.network.telephony.carriersettingsoverride
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
 import android.os.PersistableBundle
 import android.os.RemoteException
 import android.telephony.CarrierConfigManager
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyFrameworkInitializer
+import android.util.ArrayMap
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
@@ -14,10 +20,12 @@ import androidx.lifecycle.viewModelScope
 import com.android.internal.telephony.ICarrierConfigLoader
 import com.android.settings.R
 import com.android.settings.network.telephony.CarrierConfigRepository
+import app.grapheneos.carrierconfig2.ICarrierConfigSettingsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +40,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -98,33 +107,131 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
 
     private var isInitialized = false
 
+    private val intent = Intent().apply {
+        component = ComponentName(
+            "app.grapheneos.carrierconfig2",
+            "app.grapheneos.carrierconfig2.CarrierConfigSettings"
+        )
+    }
+
+    val service: StateFlow<ICarrierConfigSettingsService?> = callbackFlow {
+        val conn = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                Log.d(TAG, "onServiceConnected")
+                trySend(ICarrierConfigSettingsService.Stub.asInterface(service))
+            }
+
+            override fun onServiceDisconnected(name: ComponentName) {
+                Log.d(TAG, "onServiceDisconnected")
+                trySend(null)
+            }
+
+            override fun onBindingDied(name: ComponentName) {
+                Log.d(TAG, "onBindingDied")
+                trySend(null)
+                // ignore failures
+                runCatching {
+                    application.unbindService(this)
+                    application.bindService(intent, this, Context.BIND_AUTO_CREATE)
+                }
+            }
+        }
+
+        val bound = runCatching {
+            withContext(Dispatchers.Main.immediate) {
+                Log.d(TAG, "bindService called")
+                application.bindService(intent, conn, Context.BIND_AUTO_CREATE)
+            }
+        }.getOrElse {
+            close(it)
+            return@callbackFlow
+        }
+        if (!bound) {
+            close(IllegalStateException("bindService returned false"))
+            return@callbackFlow
+        }
+
+        awaitClose {
+            application.unbindService(conn)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = null
+    )
+
     fun init(subId: Int) {
+        if (isInitialized) return
+
         this.subId.update { oldSubId ->
-            if (oldSubId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) subId else oldSubId
+            if (oldSubId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                subId
+            } else {
+                return
+            }
         }
         viewModelScope.launch(Dispatchers.Default) {
             reloadFromCarrierConfig()
+
             isInitialized = true
         }
     }
 
+    private val _unrecognizedOverrides =
+        MutableStateFlow<ArrayMap<String, Any?>?>(null)
+    val unrecognizedOverrides: StateFlow<ArrayMap<String, Any?>?> = _unrecognizedOverrides
+
+    private suspend fun setOverrideConfig(newOverrides: PersistableBundle?): Boolean {
+        val service = service.firstWithTimeoutOrNull() ?: return false
+        Log.d(TAG, "calling setOverrideConfig")
+        service.setOverrideConfig(subId.value, newOverrides)
+
+        return true
+    }
+
+    private suspend fun getOverrideConfigForSubId(): PersistableBundle? {
+        val service = service.firstWithTimeoutOrNull() ?: return null
+        Log.d(TAG, "calling getOverrideConfigForSubId")
+        return service.getOverrideConfigForSubId(subId.value)
+    }
+
     private suspend fun reloadFromCarrierConfig() {
-        // Query telephony for current active overrides. This is a new method added to
-        // CarrierConfigLoader
-        val activeOverrides: PersistableBundle = carrierConfigLoader
+        // Query CarrierConfig2
+        val activeOverrides = getOverrideConfigForSubId()
+        if (activeOverrides == null) {
+            _message.update {
+                MessageType.ErrorMessage(
+                    application.getString(
+                        R.string.carrier_settings_override_error_unable_to_connect_to_config
+                    )
+                )
+            }
+        }
+        Log.d(TAG, "activeOverrides: $activeOverrides")
+        _isAnOverrideActive.update { activeOverrides?.isEmpty == false }
+
+        // Display any overrides from AOSP. We expect these to not be set, because this is only
+        // meant to be used as a test API.
+        val overridesFromAosp: PersistableBundle = carrierConfigLoader
             .getOverrideConfigForSubIdWithFeature(
                 subId.value,
                 application.opPackageName,
-                application.attributionTag,
-                true
+                application.attributionTag
             )
-        activeOverrides.remove(KEY_VERSION)
-
-        if (activeOverrides.isEmpty) {
-            _isAnOverrideActive.update { false }
+        overridesFromAosp.remove(KEY_VERSION)
+        if (overridesFromAosp.isEmpty) {
+            _unrecognizedOverrides.update { null }
+        } else {
+            // every override from AOSP is unrecognized
+            val newUnrecognizedOverrides = ArrayMap<String, Any?>()
+            overridesFromAosp.keySet().forEach { key ->
+                newUnrecognizedOverrides[key] = overridesFromAosp.get(key)
+            }
+            Log.d(TAG, "found newUnrecognizedOverrides: $newUnrecognizedOverrides")
+            _unrecognizedOverrides.update {
+                newUnrecognizedOverrides.ifEmpty { null }
+            }
         }
-
-        Log.d(TAG, "activeOverrides: $activeOverrides")
 
         // Construct states
         val configList = allowedUserChangeableCarrierConfigOptions.map { flagKey ->
@@ -132,7 +239,7 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
                 subId.value,
                 carrierConfigRepo,
                 flagKey,
-                activeOverrides
+                activeOverrides ?: PersistableBundle()
             )
             if (state.isOverriddenBefore.value && !_isAnOverrideActive.value) {
                 _isAnOverrideActive.update { true }
@@ -212,24 +319,34 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
             }
             Log.d(TAG, "submitting overrides $overrides")
 
-            // overrideConfig does the update asynchronously by posting to a handler, so the config
-            // is not guaranteed to updated immediately after this Binder call. Wait until an update
-            // is broadcast after making the override call.
-            //
-            // Start waiting here to avoid missing very a fast update.
-            val waiter = async { carrierConfigUpdatePing.first() }
+
             try {
-                carrierConfigLoader.overrideConfig(subId.value, overrides, true)
-                withTimeoutOrNull(2000L) {
-                    waiter.await()
-                    Log.d(TAG, "proceeding after carrier config update")
+                runThenAwaitCarrierConfigUpdateIfTrue {
+                    if (setOverrideConfig(overrides)) {
+                        _message.update { null }
+                        true
+                    } else {
+                        _message.update {
+                            MessageType.ErrorMessage(
+                                application.getString(
+                                    R.string.carrier_settings_override_error_unable_to_connect_to_config
+                                )
+                            )
+                        }
+                        false
+                    }
                 }
-                _message.update { null }
+
+                if (clearOverrides && !_unrecognizedOverrides.value.isNullOrEmpty()) {
+                    Log.d(TAG, "clearing all AOSP overrides")
+                    runThenAwaitCarrierConfigUpdateIfTrue {
+                        carrierConfigLoader.overrideConfig(subId.value, null, true)
+                        true
+                    }
+                }
             } catch (e: RemoteException) {
                 Log.e(TAG, "error while overriding config", e)
                 _message.update { MessageType.ErrorMessage("RemoteException: ${e.message}") }
-            } finally {
-                waiter.cancel()
             }
             reloadFromCarrierConfig()
             // delay so user can't spam quickly
@@ -239,4 +356,32 @@ class CarrierSettingsOverridesViewModel(application: Application) : AndroidViewM
             _isOverriding.update { false }
         }
     }.let { }
+
+    private suspend inline fun runThenAwaitCarrierConfigUpdateIfTrue(
+        timeoutMillis: Long = 2000L,
+        crossinline block: suspend () -> Boolean
+    ) {
+        coroutineScope {
+            // setOverrideConfig, etc. do the updates asynchronously, so the config is not
+            // guaranteed to update immediately after RPC Binder calls. Wait until an update is
+            // broadcast after making the override call.
+            //
+            // Start waiting here to avoid missing very a fast update.
+            val waiter = async { carrierConfigUpdatePing.first() }
+            try {
+                if (block()) {
+                    withTimeoutOrNull(timeoutMillis) {
+                        waiter.await()
+                    }
+                }
+            } finally {
+                waiter.cancel()
+            }
+        }
+    }
 }
+
+private suspend fun <T> Flow<T>.firstWithTimeoutOrNull(timeMillis: Long = 1000): T? =
+    withTimeoutOrNull(timeMillis) {
+        filter { it != null }.first()
+    }
