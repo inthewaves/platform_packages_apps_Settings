@@ -204,7 +204,7 @@ public class ProfileSelectFragmentTest {
     @Test
     public void testGetFragments_whenPrivateDisabled_returnsOneFragment() {
         mUserManager.addProfile(
-                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN, USER_TYPE_FULL_SYSTEM));
+                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN | FLAG_FULL, USER_TYPE_FULL_SYSTEM));
         mUserManager.addProfile(
                 new UserInfo(11, PRIVATE_USER_NAME, null, 0, USER_TYPE_PROFILE_PRIVATE));
         Fragment[] fragments = ProfileSelectFragment.getFragments(
@@ -225,7 +225,7 @@ public class ProfileSelectFragmentTest {
     @Test
     public void testGetFragments_whenPrivateEnabled_returnsTwoFragments() {
         mUserManager.addProfile(
-                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN, USER_TYPE_FULL_SYSTEM));
+                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN | FLAG_FULL, USER_TYPE_FULL_SYSTEM));
         mUserManager.addProfile(
                 new UserInfo(11, PRIVATE_USER_NAME, null, 0, USER_TYPE_PROFILE_PRIVATE));
         Fragment[] fragments = ProfileSelectFragment.getFragments(
@@ -246,7 +246,7 @@ public class ProfileSelectFragmentTest {
     @Test
     public void testGetFragments_whenAllProfiles_returnsThreeFragments() {
         mUserManager.addProfile(
-                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN, USER_TYPE_FULL_SYSTEM));
+                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN | FLAG_FULL, USER_TYPE_FULL_SYSTEM));
         mUserManager.addProfile(
                 new UserInfo(10, MANAGED_USER_NAME, null, 0, USER_TYPE_PROFILE_MANAGED));
         mUserManager.addProfile(
@@ -269,7 +269,7 @@ public class ProfileSelectFragmentTest {
     @Test
     public void testGetFragments_whenAvailableBundle_returnsFragmentsWithCorrectBundles() {
         mUserManager.addProfile(
-                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN, USER_TYPE_FULL_SYSTEM));
+                new UserInfo(0, PRIMARY_USER_NAME, null, FLAG_MAIN | FLAG_FULL, USER_TYPE_FULL_SYSTEM));
         mUserManager.addProfile(
                 new UserInfo(10, MANAGED_USER_NAME, null, 0, USER_TYPE_PROFILE_MANAGED));
         mUserManager.addProfile(
