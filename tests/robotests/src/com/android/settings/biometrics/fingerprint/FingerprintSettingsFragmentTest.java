@@ -80,7 +80,6 @@ import androidx.test.core.app.ApplicationProvider;
 import com.android.settings.biometrics.fingerprint.feature.FingerprintExtPreferencesProvider;
 import com.android.internal.widget.LockPatternUtils;
 import com.android.settings.biometrics.fingerprint.feature.PrimarySwitchIntentPreference;
-import com.android.settings.biometrics.fingerprint.feature.SfpsRestToUnlockFeature;
 import com.android.settings.password.ChooseLockSettingsHelper;
 import com.android.settings.password.ConfirmDeviceCredentialActivity;
 import com.android.settings.search.BaseSearchIndexProvider;
@@ -164,8 +163,6 @@ public class FingerprintSettingsFragmentTest {
     private FakeFeatureFactory mFeatureFactory;
     @Mock
     private LockPatternUtils mLockPatternUtils;
-    @Mock
-    private SfpsRestToUnlockFeature mSfpsRestToUnlockFeature;
 
     @Before
     public void setUp() {
@@ -195,8 +192,6 @@ public class FingerprintSettingsFragmentTest {
 
         when(mFakeFeatureFactory.securityFeatureProvider.getLockPatternUtils(mContext))
                 .thenReturn(mLockPatternUtils);
-        when(mFakeFeatureFactory.mFingerprintFeatureProvider.getSfpsRestToUnlockFeature(mContext))
-                .thenReturn(mSfpsRestToUnlockFeature);
 
         when(mLockPatternUtils.checkUserSupportsBiometricSecondFactor(anyInt())).thenReturn(true);
     }
